@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Alodai repos carry the Alodai identity only. Strip any Co-authored-by trailer
+# pointing at nectios.com — it comes from the operator's Claude account email,
+# not from git config, so no git setting can prevent it.
+set -euo pipefail
+MSG="$1"
+if grep -qiE '^Co-authored-by:.*nectios\.com' "$MSG"; then
+  grep -viE '^Co-authored-by:.*nectios\.com' "$MSG" > "$MSG.tmp" && mv "$MSG.tmp" "$MSG"
+  echo "commit-msg: stripped a nectios.com Co-authored-by trailer" >&2
+fi
