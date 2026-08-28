@@ -11,7 +11,6 @@
 // markers. Pass --fast to skip every install-based arm.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -45,10 +44,22 @@ const setPatch = (key, patchPath) => {
   writeFileSync(PKG, JSON.stringify(j, null, 2) + '\n');
   return pnpmInstall();
 };
-const markerCount = (pkg, file, marker, fromPkgJson) => {
-  const require = createRequire(join(ROOT, fromPkgJson));
-  const dir = dirname(require.resolve(`${pkg}/package.json`));
-  return (readFileSync(join(dir, file), 'utf8').match(new RegExp(marker, 'g')) || []).length;
+// Resolve in a FRESH CHILD PROCESS. Node caches module resolution per process, so after a
+// reinstall an in-process resolve still returns the previous store path — which reads exactly
+// like a revert that did not happen. This runner reinstalls between arms, so it must not cache.
+const resolveDirFresh = (fromPkgJson, chain) => {
+  const r = run(process.execPath, [join(ROOT, 'tools', 'resolve-chain.mjs'), fromPkgJson, ...chain]);
+  if (r.code !== 0) throw new Error(`resolve failed for ${chain.join(' -> ')}: ${r.out.trim().split('\n').pop()}`);
+  return r.out.trim();
+};
+const markerCount = (chain, file, marker, fromPkgJson) => {
+  const f = join(resolveDirFresh(fromPkgJson, chain), file);
+  const text = readFileSync(f, 'utf8');
+  // POSITIVE ARM: a count of 0 from a file we could not read, or from the wrong file, is
+  // indistinguishable from a clean tree. Require the anchor the marker sits beside.
+  const anchor = marker === 'STRUDEL_STUDY_NOPOOL' ? 'getNodeFromPool' : 'newFraction';
+  if (!text.includes(anchor)) throw new Error(`SIGHTING FAILED: no ${anchor} in ${f}`);
+  return (text.match(new RegExp(marker, 'g')) || []).length;
 };
 
 const H = (t) => console.log(`\n${'─'.repeat(78)}\n${t}\n${'─'.repeat(78)}`);
@@ -86,7 +97,7 @@ try {
     // harness that never reads fraction.js at all.
     console.log('\napplying patches/fraction.js@5.3.4.patch — value-preserving n/d -> 2n/2d …');
     setPatch('fraction.js@5.3.4', 'patches/fraction.js@5.3.4.patch');
-    const sabMarkers = markerCount('fraction.js', 'dist/fraction.mjs', 'STRUDEL_STUDY_FRACSAB', 'layer1/package.json');
+    const sabMarkers = markerCount(['@strudel/core', 'fraction.js'], 'dist/fraction.mjs', 'STRUDEL_STUDY_FRACSAB', 'layer1/package.json');
     record({
       id: 'L1-FRAC-INSTALLED', group: 'layer1', desc: 'sabotage is actually present in the installed tree',
       expect: 'marker count > 0', obs: `STRUDEL_STUDY_FRACSAB × ${sabMarkers}`, pass: sabMarkers > 0,
@@ -101,7 +112,7 @@ try {
 
     console.log('\nreverting fraction.js …');
     setPatch('fraction.js@5.3.4', null);
-    const backMarkers = markerCount('fraction.js', 'dist/fraction.mjs', 'STRUDEL_STUDY_FRACSAB', 'layer1/package.json');
+    const backMarkers = markerCount(['@strudel/core', 'fraction.js'], 'dist/fraction.mjs', 'STRUDEL_STUDY_FRACSAB', 'layer1/package.json');
     const restored = node('tools/verify-layer1.mjs');
     record({
       id: 'L1-FRAC-RESTORE', group: 'layer1', desc: 'revert restores the tree and the digests',
@@ -183,13 +194,13 @@ try {
     // ══ GROUP 6 — the pool experiment's arm B is really installable ═════════════════════
     H('GROUP 6 — pool experiment: arm B applies as a patch and reverts cleanly');
     setPatch('superdough@1.3.0', 'patches/superdough@1.3.0.patch');
-    const onM = markerCount('superdough', 'nodePools.mjs', 'STRUDEL_STUDY_NOPOOL', 'layer2/package.json');
+    const onM = markerCount(['superdough'], 'nodePools.mjs', 'STRUDEL_STUDY_NOPOOL', 'layer2/package.json');
     const armB = node('layer2/render-n.mjs', ['1']);
     const bRow = armB.out.trim().split('\n').pop().split('\t');
     console.log(`arm B installed: marker × ${onM}; a render under arm B -> ${(bRow[2] ?? '').slice(0, 16)}… peak=${bRow[3]}`);
     record({ id: 'L2-POOL-B', group: 'layer2', desc: 'arm B — pool reuse disabled', expect: 'marker present and the tree still renders non-silent', obs: `marker × ${onM}, peak ${bRow[3]}`, pass: onM === 1 && Number(bRow[3]) > 0.001 });
     setPatch('superdough@1.3.0', null);
-    const offM = markerCount('superdough', 'nodePools.mjs', 'STRUDEL_STUDY_NOPOOL', 'layer2/package.json');
+    const offM = markerCount(['superdough'], 'nodePools.mjs', 'STRUDEL_STUDY_NOPOOL', 'layer2/package.json');
     const armA = node('layer2/render-n.mjs', ['1']);
     const aRow = armA.out.trim().split('\n').pop().split('\t');
     console.log(`arm A restored:  marker × ${offM}; a render under arm A -> ${(aRow[2] ?? '').slice(0, 16)}… peak=${aRow[3]}`);
@@ -201,8 +212,8 @@ try {
   const r = pnpmInstall();
   const identical = readFileSync(PKG).equals(SNAPSHOT);
   let frac = -1, pool = -1;
-  try { frac = markerCount('fraction.js', 'dist/fraction.mjs', 'STRUDEL_STUDY_FRACSAB', 'layer1/package.json'); } catch {}
-  try { pool = markerCount('superdough', 'nodePools.mjs', 'STRUDEL_STUDY_NOPOOL', 'layer2/package.json'); } catch {}
+  try { frac = markerCount(['@strudel/core', 'fraction.js'], 'dist/fraction.mjs', 'STRUDEL_STUDY_FRACSAB', 'layer1/package.json'); } catch {}
+  try { pool = markerCount(['superdough'], 'nodePools.mjs', 'STRUDEL_STUDY_NOPOOL', 'layer2/package.json'); } catch {}
   record({
     id: 'RESTORE', group: 'restore', desc: 'package.json and both trees are back as they were',
     expect: 'byte-identical manifest, install ok, zero mutation markers',

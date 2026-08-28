@@ -17,12 +17,9 @@ KEY='superdough@1.3.0'
 PATCH="patches/superdough@1.3.0.patch"
 MARKER='STRUDEL_STUDY_NOPOOL'
 
+# Resolved in a fresh process every time — see tools/resolve-chain.mjs for why.
 installed_file() {
-  node -e "
-    const {createRequire}=require('module');
-    const r=createRequire('$ROOT/layer2/package.json');
-    console.log(require('path').join(require('path').dirname(r.resolve('superdough/package.json')),'nodePools.mjs'));
-  "
+  echo "$(node "$ROOT/tools/resolve-chain.mjs" layer2/package.json superdough)/nodePools.mjs"
 }
 
 # POSITIVE ARM: the file must be readable and must contain getNodeFromPool at all. A marker

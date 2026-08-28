@@ -19,7 +19,8 @@
     "pool:revert": "bash patches/apply-superdough-nopool.sh revert",
     "pool:status": "bash patches/apply-superdough-nopool.sh status",
     "verify:layer1": "node tools/verify-layer1.mjs",
-    "controls:fast": "node tools/controls.mjs --fast"
+    "controls:fast": "node tools/controls.mjs --fast",
+    "summarise": "node tools/summarise-run.mjs"
   },
   "pnpm": {
     "overrides": {

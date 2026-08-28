@@ -59,4 +59,4 @@ for (let i = 0, o = 0; i < L.length; i++) {
     pcm.writeInt16LE((v < 0 ? v * 0x8000 : v * 0x7fff) | 0, o); o += 2;
   }
 }
-console.log(`${process.pid}\t1\t${createHash('sha256').update(pcm).digest('hex')}\t${peak.toFixed(6)}\tframes=${buf.length}\tworklet=${WORKLET}`);
+console.log(`ROW\t${process.pid}\t1\t${createHash('sha256').update(pcm).digest('hex')}\t${peak.toFixed(6)}\tframes=${buf.length}\tworklet=${WORKLET}`);
