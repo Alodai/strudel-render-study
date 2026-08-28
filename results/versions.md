@@ -33,8 +33,19 @@ Host of record: `darwin-arm64`, Node `v22.17.1`.
 - `@kabelsalat/web@0.4.1` <- `patches/@kabelsalat__web@0.4.1.patch`
 
 Every patch is a diff against the published package. No dependency is vendored into this
-repository. `patches/superdough@1.3.0.patch` and `patches/fraction.js@5.3.4.patch` are
-experiment arms and are NOT applied by default — see README.md.
+repository. Everything under `patches/` other than the entry above is an experiment arm and
+is NOT applied by default:
+
+| patch | arm |
+|---|---|
+| `superdough@1.3.0.patch` | pool reuse disabled — layer 2, README claim 9 |
+| `fraction.js@5.3.4.patch` | value-preserving `n/d -> 2n/2d` — layer 1, `L1-FRAC`, must leave the digests unchanged |
+| `fraction.js@5.3.4.valmut-n-plus-1.patch` | changes a rational's VALUE. Does not produce a different digest: the run dies with `JavaScript heap out of memory`, exit 134, after about a minute |
+| `fraction.js@5.3.4.valmut-d-subset.patch` | the same, by a different route, with the same outcome |
+
+The two `valmut` patches are published so an observation in `layer1-normalisation.md` is
+reproducible, not because anyone should want to apply them. Each takes roughly a minute to
+reach a 4 GB heap and die — that IS the observation.
 
 ## Why fraction.js is pinned
 

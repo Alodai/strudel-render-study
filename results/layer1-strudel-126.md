@@ -152,4 +152,6 @@ matches nothing makes `git diff --quiet` exit 0 over a file that still holds the
 * **No layer-2 measurement is re-run or re-recorded.** This is a pattern-layer arm.
 
 `RESTORE` asserts the first of those three from inside the runner: byte-identical manifests,
-the installed tree back at 1.2.5, zero sabotage markers, and `verify:layer1` green.
+`patterns/patterns.json` unmutated, the installed tree back at 1.2.5, zero sabotage markers,
+and `verify:layer1` green — and it is the one arm that still reports when the run aborts, which
+is why it passes in the red-proof above.

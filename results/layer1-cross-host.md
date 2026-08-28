@@ -6,7 +6,7 @@ Three environments, and the three digests are identical in all of them.
 |---|---|
 | `darwin-arm64`, native | the host of record — `pnpm layer1` / `pnpm verify:layer1` |
 | `linux-x64`, **emulated** | `pnpm cross-host`, run in this repository |
-| `linux-x64`, **native** | run on that host and **reported**; recorded here as a transcript, not re-derivable here |
+| `linux-x64`, **native** | run on that host and **reported**; recorded here as a transcript, not re-derivable here. This is the row that removes CPU emulation as an explanation |
 
 ## The emulated linux-x64 host
 
@@ -26,6 +26,10 @@ p3	haps=32	sha256=f92aa8de573977d783beae803e9ce239051185aaaed1a2b515df746ea1ff09
 p1  MATCH     p2  MATCH     p3  MATCH
 compared 3 patterns, 0 mismatched
 ```
+
+Re-run for v1.0.3, because that release changed `layer1/digest.mjs` — the file the container
+copies — to reduce rationals by gcd before serialising them (`layer1-normalisation.md`). The
+container is on the same three digests, `0 mismatched`, exit 0.
 
 | | host of record | second host | third host |
 |---|---|---|---|
@@ -69,7 +73,20 @@ can close that gap in two commands — `node layer1/run.mjs > mine.txt` there, t
 `pnpm verify:transcript mine.txt` — and layer 1 is exactly reproducible, so a disagreement is
 a real finding rather than expected variance.
 
-## Why an emulated CPU is sound here and would not be for layer 2
+## CPU emulation is no longer an open question
+
+The native row settles it. Whatever else differs between these three environments, **one of
+them is not emulating a CPU**, and it produces the same three digests as the two that are or
+were. So "the agreement is an artefact of running the amd64 image under emulation on the same
+Apple-silicon machine" is not available as an explanation of the cross-environment result, and
+no argument has to be accepted for that to be true.
+
+The argument below is kept because it is still the honest account of the **emulated** arm, and
+because it says something the native run does not: *why* emulation could not have been the
+variable, which is a statement about layer 1's arithmetic rather than about which machines
+happened to be available. It is no longer load-bearing.
+
+## Why an emulated CPU was sound here and would not be for layer 2
 
 Layer 1 executes **no floating point at all**. Hap times are exact `Fraction`s over `BigInt`
 and are serialised as `n/d`, never through `valueOf()`. Since no FP executes, CPU emulation
@@ -80,13 +97,14 @@ Layer 2 is about timing under contention, which is exactly what emulation confou
 one of the two reasons there is no cross-host layer-2 table, and it is why the same host does
 not license a layer-2 claim while an emulated host does not disqualify a layer-1 one.
 
-**The native run does not replace that argument, and does not need to.** The paragraph above
-is still the honest account of the emulated arm: the reasoning is sound whether or not a
-native host is ever available, and it is what licenses the emulated row on its own terms. What
-the native run does is make the question moot rather than answered — there is now a row in
-which the CPU is not emulated, so a reader who does not accept the argument does not have to.
-Both rows stay, because an argument that was only kept while it was the only evidence is an
-argument nobody should have believed.
+Both rows stay. The emulated one is not redundant — it is the row with a different libc and a
+different Node build, which the native row does not supply — and an argument kept only while it
+was the only evidence is an argument nobody should have believed.
+
+## These three environments, crossed with the two `@strudel/core` releases
+
+`layer1-strudel-126.md` carries that grid, with the one cell nobody has run marked as
+unmeasured rather than left to be inferred from the five around it.
 
 ## The checks have been observed failing
 

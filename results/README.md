@@ -41,7 +41,7 @@ checked 3 patterns, 1 mismatched                                  exit 1
 
 The corruption was sighted before the red was believed — `diff` against the original shows the
 one changed line — because an edit that changed nothing produces a green that reads exactly
-like a working check. `pnpm controls`' `L1-FRAC` arm is the stronger version of the same
+like a working check. `pnpm controls`' `L1-SEM` arm is the stronger version of the same
 requirement: there the *digests* move, not the reference, which is what shows they are
 computed rather than copied. `results/layer1-strudel-126.md` runs both against 1.2.6.
 
@@ -86,4 +86,5 @@ node ../tools/summarise-run.mjs this-repo/layer2-run2-192.tsv
 | file | what it is |
 |---|---|
 | `layer1-cross-host.md` | layer 1 on three environments — `darwin-arm64` native, `linux-x64` emulated (by `pnpm cross-host`), `linux-x64` native (reported, recorded as a transcript) — including the runs where both checks were observed failing |
-| `layer1-strudel-126.md` | layer 1 on `@strudel/core` 1.2.6, the version layer 2 renders through: same three digests, by `pnpm layer1:126`. An optional arm — the default 1.2.5 pin does not move |
+| `layer1-strudel-126.md` | layer 1 on `@strudel/core` 1.2.6, the version layer 2 renders through: same three digests, by `pnpm layer1:126`. An optional arm — the default 1.2.5 pin does not move. Carries the environment × release grid, with the one unmeasured cell marked |
+| `layer1-normalisation.md` | why `rat()` reduces by gcd since v1.0.3, what that fixed, which control arm inverted as a result, and the one form of control that turned out not to be available |
