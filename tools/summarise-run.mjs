@@ -29,6 +29,7 @@ for (const [sha, n] of ranked.slice(1)) {
 const peaks = new Set(rows.map((r) => r.peak));
 console.log(`peaks observed: ${[...peaks].join(', ')} — ${peaks.size === 1 ? 'identical across every render, divergent ones included' : 'more than one peak'}`);
 if (divergent === 0) {
-  console.log('\nZero divergences. On an idle machine this is the expected outcome and says');
-  console.log('nothing either way — see the scope section of README.md before concluding anything.');
+  console.log('\nZero divergences. This run observed nothing. That neither confirms nor refutes');
+  console.log('what is reported here, and it is not evidence about how loaded this machine was —');
+  console.log('see the scope section of README.md before concluding anything.');
 }
