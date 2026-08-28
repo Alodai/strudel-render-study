@@ -30,6 +30,22 @@ const run = (cmd, args, opts = {}) => {
   }
 };
 const node = (script, args = [], env = {}) => run(process.execPath, [join(ROOT, script), ...args], { env: { ...process.env, ...env } });
+// The harness rows are 'ROW <TAB> pid <TAB> pos <TAB> sha256 <TAB> peak [<TAB> extras]'.
+// Parse by NAME, never by position: this runner reads rows from two different scripts whose
+// trailing columns differ, and a positional read of the wrong column produced a comparison
+// that passed while measuring nothing.
+const lastRow = (out) => {
+  const line = out.split('\n').reverse().find((l) => l.startsWith('ROW\t'));
+  // POSITIVE ARM: no row at all must raise, not return zeroes. A render that never happened
+  // and a render with peak 0 are different events.
+  if (!line) throw new Error('no ROW line in output — the render did not report');
+  const c = line.split('\t');
+  const row = { pid: c[1], pos: Number(c[2]), sha: c[3], peak: Number(c[4]) };
+  if (!/^[0-9a-f]{64}$/.test(row.sha) || !Number.isFinite(row.peak)) {
+    throw new Error(`malformed ROW: ${JSON.stringify(line)}`);
+  }
+  return row;
+};
 const lastJson = (out) => {
   const line = out.split('\n').reverse().find((l) => l.startsWith('JSON '));
   return line ? JSON.parse(line.slice(5)) : null;
@@ -147,7 +163,7 @@ try {
 
   // ══ GROUP 4 — the worklet sighting probe ═════════════════════════════════════════════
   H('GROUP 4 — the attribution arm is only meaningful if its worklet is live');
-  const iso = (args, env) => { const r = node('layer2/isolation.mjs', args, env); const [, , sha, peak] = r.out.trim().split('\n').pop().split('\t'); return { sha, peak: Number(peak) }; };
+  const iso = (args, env) => lastRow(node('layer2/isolation.mjs', args, env).out);
   const plain = iso([], {});
   const wk1 = iso(['worklet'], {});
   const wkH = iso(['worklet'], { WK_GAIN: '0.5' });
@@ -195,16 +211,14 @@ try {
     H('GROUP 6 — pool experiment: arm B applies as a patch and reverts cleanly');
     setPatch('superdough@1.3.0', 'patches/superdough@1.3.0.patch');
     const onM = markerCount(['superdough'], 'nodePools.mjs', 'STRUDEL_STUDY_NOPOOL', 'layer2/package.json');
-    const armB = node('layer2/render-n.mjs', ['1']);
-    const bRow = armB.out.trim().split('\n').pop().split('\t');
-    console.log(`arm B installed: marker × ${onM}; a render under arm B -> ${(bRow[2] ?? '').slice(0, 16)}… peak=${bRow[3]}`);
-    record({ id: 'L2-POOL-B', group: 'layer2', desc: 'arm B — pool reuse disabled', expect: 'marker present and the tree still renders non-silent', obs: `marker × ${onM}, peak ${bRow[3]}`, pass: onM === 1 && Number(bRow[3]) > 0.001 });
+    const bRow = lastRow(node('layer2/render-n.mjs', ['1']).out);
+    console.log(`arm B installed: marker × ${onM}; a render under arm B -> ${bRow.sha.slice(0, 16)}… peak=${bRow.peak}`);
+    record({ id: 'L2-POOL-B', group: 'layer2', desc: 'arm B — pool reuse disabled', expect: 'marker present and the tree still renders non-silent', obs: `marker × ${onM}, peak ${bRow.peak}`, pass: onM === 1 && bRow.peak > 0.001 });
     setPatch('superdough@1.3.0', null);
     const offM = markerCount(['superdough'], 'nodePools.mjs', 'STRUDEL_STUDY_NOPOOL', 'layer2/package.json');
-    const armA = node('layer2/render-n.mjs', ['1']);
-    const aRow = armA.out.trim().split('\n').pop().split('\t');
-    console.log(`arm A restored:  marker × ${offM}; a render under arm A -> ${(aRow[2] ?? '').slice(0, 16)}… peak=${aRow[3]}`);
-    record({ id: 'L2-POOL-A', group: 'layer2', desc: 'arm A — superdough as published, restored', expect: 'marker count 0 and the tree still renders', obs: `marker × ${offM}, peak ${aRow[3]}`, pass: offM === 0 && Number(aRow[3]) > 0.001 });
+    const aRow = lastRow(node('layer2/render-n.mjs', ['1']).out);
+    console.log(`arm A restored:  marker × ${offM}; a render under arm A -> ${aRow.sha.slice(0, 16)}… peak=${aRow.peak}`);
+    record({ id: 'L2-POOL-A', group: 'layer2', desc: 'arm A — superdough as published, restored', expect: 'marker count 0 and the tree still renders', obs: `marker × ${offM}, peak ${aRow.peak}`, pass: offM === 0 && aRow.peak > 0.001 });
   }
 } finally {
   // ══ RESTORE — verified two ways, never assumed ═════════════════════════════════════════
