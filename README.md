@@ -62,13 +62,23 @@ wants to model the dependence structure has the data to do it. That analysis is 
 | layer 1 also confirmed against | `@strudel/core` **1.2.6**, the version layer 2 renders through — identical digests, by `pnpm layer1:126` in this repository |
 | layer 2 on a second host | **not run** — see below |
 
-Layer 2 was **not** measured cross-host. The available second host was CPU-emulated, which
-confounds precisely the variable layer 2 is about; and reaching Strudel's renderer there would
-have meant replicating more scaffolding, moving further from Strudel's own code. Layer 1 is
-sound on an emulated host for the opposite reason: it executes no floating point at all, so
-emulation cannot be the variable, while OS, libc, arch target and Node build genuinely differ.
-That asymmetry — the same host does not license a layer-2 claim, and an emulated host does not
-disqualify a layer-1 one — is the methodological point, so it is stated rather than buried.
+Layer 2 is still **not** measured cross-host, and the reason has changed, so it is restated
+rather than left standing. It used to be that the only second host was CPU-emulated, which
+confounds precisely the variable layer 2 is about. A native `linux-x64` host has since run
+layer 1. Layer 2 was not run on it, and nothing here reports a layer-2 number from it.
+
+Two things follow, and neither is "we ran out of time". A layer-2 run on another machine is
+not a *check* of anything published here: layer 2 is a stochastic observation whose rates are
+reported per run with that run's load, never pooled, so a second machine yields a second
+observation rather than a confirmation or a refutation of the first. And reaching Strudel's
+renderer on that host would mean replicating more scaffolding, moving further from Strudel's
+own code, which is the thing this study is trying not to do.
+
+Layer 1 is sound on an emulated host for the opposite reason: it executes no floating point at
+all, so emulation cannot be the variable, while OS, libc, arch target and Node build genuinely
+differ. That asymmetry — the same host does not license a layer-2 claim, and an emulated host
+does not disqualify a layer-1 one — is the methodological point, so it is stated rather than
+buried.
 
 **The cause is unidentified.** Three candidate mechanisms were tested and are recorded so
 nobody restarts there:

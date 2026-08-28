@@ -13,7 +13,7 @@ pnpm layer1:126
 
 `tools/layer1-126.mjs` installs `@strudel/core@1.2.6` and `@strudel/mini@1.2.6` into `layer1`,
 runs the identical layer-1 code, compares against the same `results/layer1-digests.txt`, runs
-two negative controls, and restores the 1.2.5 tree. The `@kabelsalat/web` exports patch that
+its controls, and restores the 1.2.5 tree. The `@kabelsalat/web` exports patch that
 1.2.6 needs is already in the root manifest, so nothing is toggled to obtain it.
 
 ## Result — the three digests are unchanged, byte for byte
@@ -41,10 +41,36 @@ checked 3 patterns, 0 mismatched
 So the layer-1 claim and the layer-2 measurement are about the same pattern engine, and the
 1.2.5 pin is a packaging accommodation rather than a semantic one.
 
-## Both controls were observed firing, and they control different things
+## The environment × release grid, with the unmeasured cell marked
 
-One control here would not be enough, because two different things can be broken. The
-comparison can be blind, and the digests can be inherited rather than computed.
+Six cells; **five carry evidence and one does not**. It is drawn as a grid so the hole is
+visible, not so a full matrix can be inferred from a filled corner.
+
+| environment | `@strudel/core` 1.2.5 | `@strudel/core` 1.2.6 |
+|---|---|---|
+| `darwin-arm64`, native — host of record | ✅ **run here** — `pnpm layer1` / `pnpm verify:layer1` | ✅ **run here** — `pnpm layer1:126`, 11 arms, both controls fired |
+| `linux-x64`, **emulated** — `node:22-bookworm-slim` on `linux/amd64` | ✅ **run here** — `pnpm cross-host` | ⬜ **UNMEASURED** — not run, and no digest is claimed for it |
+| `linux-x64`, **native** | 📄 **reported** — transcript, `pnpm verify:transcript` | 📄 **reported** — see below |
+
+Read the three markers as three different things, because they are:
+
+* ✅ **run here** — produced by a command in this repository, on the host of record, with its
+  controls in the same run.
+* 📄 **reported** — measured on a host this repository cannot reach, and recorded. The 1.2.5
+  cell ships its transcript (`measured/layer1-native-linux-x64.txt`) and a checker; the 1.2.6
+  cell is a reported observation with its verification described but no transcript here —
+  `layer1/node_modules/@strudel/core/package.json` read as 1.2.6, and the check observed
+  failing (corrupting p1's reference: `checked 3 patterns, 1 mismatched`, exit 1; `0
+  mismatched`, exit 0 after restore).
+* ⬜ **UNMEASURED** — nobody ran it. Every digest in the grid is the same three values, and
+  that pattern is exactly what invites a reader to fill the hole by inference. Do not: layer 1
+  is exactly reproducible, so this cell is cheap to run and worth nothing until someone does.
+
+## The controls were observed firing, and they control different things
+
+One control here would not be enough, because three different things can be wrong: the
+comparison can be blind, the digests can be inherited rather than computed, and the digest can
+be tracking the *spelling* of a rational rather than its value.
 
 **`A126-REF` — the comparison can fail.** One reference digest corrupted to `deadbeef…`, in a
 throwaway **copy** (`verify-layer1.mjs` takes `LAYER1_REF`; the committed reference is never
@@ -56,19 +82,31 @@ p2  MATCH     p3  MATCH
 checked 3 patterns, 1 mismatched            exit 1
 ```
 
-**`A126-FRAC` — the digests can move.** A green comparison against a reference is also what
-you would get from a run that read the reference and printed it back. So `fraction.js` is
-sabotaged **under 1.2.6** with the value-preserving `n/d → 2n/2d` patch, and all three digests
-must move:
+**`A126-SEM` — the digests can move, on this tree.** A green comparison against a reference is
+also what a run that read the reference and printed it back would produce. So one note of p1 is
+changed in `patterns/patterns.json` — `a3 → a4` — under 1.2.6:
 
 ```
-p1  MISMATCH  live=fd03bb3b1bca172e…  reference=90a5e26c296287ca…
-p2  MISMATCH  live=5f350a6c15ac3271…  reference=4d4b0d1e8775f361…
-p3  MISMATCH  live=51b1f09f454a8aae…  reference=f92aa8de573977d7…
-checked 3 patterns, 3 mismatched            exit 1
+p1  MISMATCH  live=966ab061e82d5b22…  reference=90a5e26c296287ca…
+p2  MATCH     p3  MATCH
+checked 3 patterns, 1 mismatched            exit 1
 ```
 
-and go back after the revert (`markers 0, exit 0`).
+Same digest the 1.2.5 tree produces for that mutation, which is itself part of the result: the
+two releases agree on the mutant as well as on the reference.
+
+**`A126-FRAC` — and they move for the right reason.** Since v1.0.3 `rat()` reduces by gcd, so a
+value-preserving `n/d → 2n/2d` inside `fraction.js` must change **nothing** — under 1.2.6 as
+under 1.2.5:
+
+```
+p1  MATCH     p2  MATCH     p3  MATCH
+checked 3 patterns, 0 mismatched            exit 0            (STRUDEL_STUDY_FRACSAB × 1)
+```
+
+The marker count is what makes that green worth reading: an unchanged digest is exactly what a
+patch that never installed would also produce. See `layer1-normalisation.md` for why this arm
+requires green rather than red, and what it used to require.
 
 **`A126-INSTALLED` — the arm really ran on 1.2.6.** The version is read from the **installed**
 `package.json`, resolved in a fresh child process, never from the manifest the script just
@@ -82,7 +120,7 @@ nothing on one side reports "no mismatches" exactly like a clean one.
 
 ## The runner itself was observed failing
 
-Eight passing arms are not evidence that the runner can report a failure. Mutating the one
+Eleven passing arms are not evidence that the runner can report a failure. Mutating the one
 line that chooses the version — `setCore(TARGET)` → `setCore(BASE)`, so the script installs
 1.2.5 while claiming 1.2.6 — from a committed base:
 
@@ -99,7 +137,7 @@ Error: the arm never ran on 1.2.6 — installed core is 1.2.5
 ```
 
 Note what the red demonstrates beyond the exit code: the sighting arm **stops the run**, so
-the six arms behind it never report at all. A green from `A126-DIGESTS` cannot be produced by
+the nine arms behind it never report at all. A green from `A126-DIGESTS` cannot be produced by
 a tree that is not on 1.2.6.
 
 The mutation was reverted by marker count and by byte comparison against the committed blob
