@@ -1,0 +1,24 @@
+diff --git a/dist/fraction.js b/dist/fraction.js
+index 816d5db079ecc25687ccf37b33a7ce09fcc565d7..c1b981cdfc568cfefa342018d109811cc75725ca 100644
+--- a/dist/fraction.js
++++ b/dist/fraction.js
+@@ -82,6 +82,7 @@ function newFraction(n, d) {
+ 
+   f["n"] = n / a;
+   f["d"] = d / a;
++  f["n"] *= 2n; f["d"] *= 2n; // STRUDEL_STUDY_FRACSAB — value-preserving, representation only
+   return f;
+ }
+ 
+diff --git a/dist/fraction.mjs b/dist/fraction.mjs
+index f6267c42c9f9bf6fef2a2415fb596178cd216589..09205278f43d5075114dd369a570d2091004c0a8 100644
+--- a/dist/fraction.mjs
++++ b/dist/fraction.mjs
+@@ -82,6 +82,7 @@ function newFraction(n, d) {
+ 
+   f["n"] = n / a;
+   f["d"] = d / a;
++  f["n"] *= 2n; f["d"] *= 2n; // STRUDEL_STUDY_FRACSAB — value-preserving, representation only
+   return f;
+ }
+ 

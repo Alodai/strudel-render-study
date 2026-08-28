@@ -1,0 +1,12 @@
+diff --git a/nodePools.mjs b/nodePools.mjs
+index 90b4c0ae7e968a4bb78430ba9384c60f69910af9..8671ae36cfb238026b9a18fc1b2f5454a7516630 100644
+--- a/nodePools.mjs
++++ b/nodePools.mjs
+@@ -66,6 +66,7 @@ const isNodeAlive = (node) => {
+ // to building it with the factory
+ export const getNodeFromPool = (key, factory) => {
+   const pool = nodePools.get(key) ?? [];
++  pool.length = 0; // STRUDEL_STUDY_NOPOOL — arm B: never reuse a pooled node
+   let node;
+   let found = false;
+   while (pool.length) {

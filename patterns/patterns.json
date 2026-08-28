@@ -1,0 +1,32 @@
+{
+  "$comment": "The three patterns under test. Data, not prose — every harness reads this file.",
+  "span": { "begin": 0, "end": 4, "$comment": "layer-1 query arc, in cycles" },
+  "render": {
+    "$comment": "layer-2 render parameters, passed verbatim to renderPatternAudio(pattern, cps, begin, end, sampleRate, bitDepth, ?, name)",
+    "sound": "sine",
+    "cps": 1,
+    "begin": 0,
+    "end": 2,
+    "sampleRate": 44100,
+    "bitDepth": 32,
+    "channels": 2
+  },
+  "patterns": {
+    "p1": {
+      "mini": "c3 e3 g3 [b3 a3]",
+      "note": "the layer-2 subject; also layer-1 pattern 1",
+      "layer2Subject": true
+    },
+    "p2": {
+      "mini": "<c3 e3> g3*3 [a3 b3 c4]",
+      "note": "alternation and fast — exercises cycle-dependent structure",
+      "layer2Subject": false
+    },
+    "p3": {
+      "mini": "c3(3,8) e3(5,8,2)",
+      "note": "Euclidean rhythms with rotation",
+      "layer2Subject": false
+    }
+  },
+  "determinism": "No rand, irand, perlin, shuffle, degrade or wall-clock in any pattern. Every value is fixed."
+}

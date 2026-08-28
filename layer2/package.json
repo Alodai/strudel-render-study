@@ -1,0 +1,13 @@
+{
+  "name": "@strudel-render-study/layer2",
+  "private": true,
+  "type": "module",
+  "description": "Layer 2 — signal-layer renders through Strudel's own renderPatternAudio.",
+  "dependencies": {
+    "@strudel/core": "1.2.6",
+    "@strudel/mini": "1.2.6",
+    "@strudel/webaudio": "1.3.0",
+    "superdough": "1.3.0",
+    "node-web-audio-api": "2.1.0"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "strudel-render-study",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "A two-layer reproducibility study of Strudel: exact pattern-layer digests, and a stochastic observation of signal-layer divergence under concurrency.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "layer1": "node layer1/run.mjs",
+    "layer2": "bash protocol/concurrency-protocol.sh strudel",
+    "controls": "node tools/controls.mjs",
+    "versions": "node tools/versions.mjs",
+    "isolation": "bash protocol/concurrency-protocol.sh isolation",
+    "isolation:worklet": "bash protocol/concurrency-protocol.sh isolation-worklet",
+    "pool:apply": "bash patches/apply-superdough-nopool.sh apply",
+    "pool:revert": "bash patches/apply-superdough-nopool.sh revert",
+    "pool:status": "bash patches/apply-superdough-nopool.sh status",
+    "verify:layer1": "node tools/verify-layer1.mjs",
+    "controls:fast": "node tools/controls.mjs --fast"
+  },
+  "pnpm": {
+    "overrides": {
+      "fraction.js": "5.3.4"
+    },
+    "onlyBuiltDependencies": [
+      "node-web-audio-api"
+    ],
+    "patchedDependencies": {
+      "@kabelsalat/web@0.4.1": "patches/@kabelsalat__web@0.4.1.patch"
+    }
+  }
+}

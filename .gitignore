@@ -1,0 +1,11 @@
+# Nothing installed or generated belongs in this repository.
+node_modules/
+.pnpm-store/
+
+# Renders. audio/ ships exactly two WAVs, committed deliberately; everything a run
+# produces goes elsewhere and stays out.
+/tmp-wavs/
+*.wav
+!audio/*.wav
+
+.DS_Store
