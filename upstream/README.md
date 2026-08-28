@@ -16,30 +16,30 @@ plausible tracker URLs do not exist.
 
 ---
 
-## Correction to `superdough-nondeterminism.md` before it is sent
+## These drafts are corrected and safe to send
 
-The draft was written from two runs of 192. This repository has since added two more, and
-**two of its generalisations do not survive the larger sample.** Fix these before sending.
+`superdough-nondeterminism.md` **has been corrected in place.** Two of its generalisations did not
+survive a larger sample, and both are now fixed in the document itself rather than annotated beside
+it — because a draft that gets sent is not a historical record, and a correction the reader meets
+*after* the claim is not a correction.
 
-**1. "Every render had an identical peak of `0.363281`" — false.** One divergent render in
-`results/this-repo/layer2-run1-192.tsv` (batch 1, pid 99343, position 3, digest
-`6d63e59e3483b7a4…`) has peak **`0.321747`**. The claim that nothing structural separates a
-good render from a bad one is therefore too strong: that one is separable by peak alone. Its
-bytes were not retained, so nothing is claimed about its energy.
+| was | is now | why |
+|---|---|---|
+| "every render had an identical peak of `0.363281`, so nothing structural distinguishes a good render from a bad one" | 25 of the 26 divergent renders share that peak; one (`6d63e59e…`, peak `0.321747`) does not, and is named | The generalisation was true of every render observed at the time and is false in general |
+| "Disabling pool reuse does not fix it" | "did not remove the divergence, and did not produce a reduction we can distinguish from noise — the pool is not cleared as a suspect" | With four unmutated runs the range is 5–9 of 192, so the mutated run of 4 sits at the edge of that spread, not clearly outside it |
+| "9 of 192 (6 distinct digests)", pooled 15/384, Fisher exact p-values | 26 of 768 across four runs, 15 distinct outputs, **no significance test at all** | Concurrent renders on one machine are not independent trials; a Fisher test or a binomial interval applies an assumption we know to be false |
 
-**2. "Not the node pool" — overstated; say "weakened, not eliminated".** The draft reports
-4 of 192 under disabled pool reuse against 9 of 192 unmutated. With four unmutated runs now
-available the range is 5–9 of 192, so a mutated run of 4 sits at the edge of the unmutated
-spread rather than clearly inside it. The evidence does not support "disabling pool reuse
-does not fix it" as flatly as written. It supports: disabling pool reuse did not remove the
-divergence, and did not produce a reduction distinguishable from run-to-run variation.
+Every figure in the corrected draft is recomputable from `../results/`. The draft now also points
+maintainers at the public artefact and tells them to read its scope section first — on an idle
+machine the expected outcome is zero divergences, and zero is not a refutation.
 
-**3. The figures that DO hold**, and can be strengthened: the divergence rate over four
-unmutated runs of 192 on one host is 9 / 6 / 6 / 5, i.e. 26 of 768. Every characterised
-divergent render carries more energy than the canonical one, and every one is byte-identical
-for its opening 0.9–1.9 s. Alternative outputs recur across independent runs — `997707bd` in
-four of five, `9d9c38ce` four times within one run — which is the strongest single argument
-that this is a discrete race and not drift.
+`kabelsalat-exports.md` and `strudel-renderPatternAudio.md` needed no correction: every claim in
+them was reproduced exactly while building this repository (`exports=881`, 0 export statements in
+`dist/index.js` against 1 naming `SalatRepl` in `dist/index.mjs`, the `undefined` return, the
+352844-byte non-silent WAV recovered at the DOM sink, and the silent-render failure mode).
 
-The drafts are left otherwise as written, so the correction is visible as a correction rather
-than quietly folded in.
+## If you are looking at a copy of these files somewhere else
+
+An earlier, uncorrected copy of all three drafts exists in the Alodai monorepo at
+`docs/papers/ICLC-2027/strudel-cross-layer/upstream/`. **This directory is the authoritative
+copy.** The monorepo copy carries the two falsified claims above and must not be sent.
