@@ -142,7 +142,7 @@ patches/                   diffs against installed packages — nothing is vendo
 results/measured/          the runs the paper cites, one row per render, with batch derived
 results/this-repo/         two further runs, produced by this repository as it stands
 audio/                     one canonical and one divergent render, for checking the comparison
-upstream/                  three unsent draft reports to the Strudel and kabelsalat trackers
+upstream/                  the three reports filed to the Strudel and kabelsalat trackers
 tools/                     the checkers, the summariser, the WAV comparison
 ```
 
@@ -219,11 +219,22 @@ artefact's own reproducible surface. Nothing in this repository can regenerate i
 
 ## Upstream
 
-`upstream/` holds three draft reports — to the kabelsalat tracker for the missing `exports`
+`upstream/` holds the three reports — to the kabelsalat tracker for the missing `exports`
 map, and to the Strudel tracker for `renderPatternAudio`'s interface and for the render
-divergence. **They have not been sent.** They are included because a study that found these
-things and told nobody would be a worse artefact, and because the drafts contain the minimal
-reproductions in the form a maintainer would want them.
+divergence. **All three were filed on 2026-08-28.**
+
+| report | filed as |
+|---|---|
+| `upstream/kabelsalat-exports.md` | <https://codeberg.org/froos/kabelsalat/issues/112> |
+| `upstream/strudel-renderPatternAudio.md` | <https://codeberg.org/uzu/strudel/issues/2116> |
+| `upstream/superdough-nondeterminism.md` | <https://codeberg.org/uzu/strudel/issues/2117> |
+
+They are kept here because a study that found these things and told nobody would be a worse
+artefact, and because they carry the minimal reproductions in the form a maintainer would want
+them. The filed text is these documents **without** their `Target — CONFIRMED:` preamble,
+which records how each tracker was located and is addressed to this repository's reader rather
+than to a maintainer; every claim, number and repro was filed as it stands here. See
+`upstream/README.md`.
 
 ## Versions
 

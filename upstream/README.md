@@ -1,27 +1,40 @@
-# Draft reports — NOT SENT
+# Upstream reports — FILED 2026-08-28
 
-Three drafts, written for the trackers named in each. **None has been sent.** They are here
-because a study that found these things and told nobody would be a worse artefact, and
-because they carry the minimal reproductions in the form a maintainer would want.
+Three reports, written for the trackers named in each, and **all three filed on 2026-08-28**.
+They are kept here because a study that found these things and told nobody would be a worse
+artefact, and because they carry the minimal reproductions in the form a maintainer would want.
 
-| file | tracker | subject |
+| file | filed as | subject |
 |---|---|---|
-| `kabelsalat-exports.md` | codeberg.org/froos/kabelsalat | `@kabelsalat/web@0.4.1` publishes no `exports` map, so Node resolves an IIFE bundle and `@strudel/core@1.2.6` cannot be imported in Node at all |
-| `strudel-renderPatternAudio.md` | codeberg.org/uzu/strudel | `renderPatternAudio` resolves to `undefined` and delivers only via a DOM download; and it does not call `registerSynthSounds()`, so a naive call renders a structurally perfect silence |
-| `superdough-nondeterminism.md` | codeberg.org/uzu/strudel | offline render is not deterministic under host load |
+| `kabelsalat-exports.md` | [froos/kabelsalat#112](https://codeberg.org/froos/kabelsalat/issues/112) | `@kabelsalat/web@0.4.1` publishes no `exports` map, so Node resolves an IIFE bundle and `@strudel/core@1.2.6` cannot be imported in Node at all |
+| `strudel-renderPatternAudio.md` | [uzu/strudel#2116](https://codeberg.org/uzu/strudel/issues/2116) | `renderPatternAudio` resolves to `undefined` and delivers only via a DOM download; and it does not call `registerSynthSounds()`, so a naive call renders a structurally perfect silence |
+| `superdough-nondeterminism.md` | [uzu/strudel#2117](https://codeberg.org/uzu/strudel/issues/2117) | offline render is not deterministic under host load |
 
 Each was written against the repository that actually publishes the package, verified rather
 than guessed: npm holds no `repository` field for any `@kabelsalat/*` package, and two
 plausible tracker URLs do not exist.
 
+## The filed text is not byte-identical to these files
+
+**What was filed is the technical content of each document without its research-trail
+preamble** — the `Target — CONFIRMED:` block at the head of each file, which records how the
+tracker was located and why the obvious guesses were wrong. That is an account of our own
+work, addressed to this repository's reader; it is not something a maintainer of the project
+needs in their inbox, so it was removed before filing.
+
+Every claim, number, table and repro in each document was filed as it stands here. But these
+files are the artefact's copies, not transcripts of the issues, so read the linked issue if
+you need the exact text a maintainer received.
+
 ---
 
-## These drafts are corrected and safe to send
+## What was corrected before filing
 
-`superdough-nondeterminism.md` **has been corrected in place.** Two of its generalisations did not
-survive a larger sample, and both are now fixed in the document itself rather than annotated beside
-it — because a draft that gets sent is not a historical record, and a correction the reader meets
-*after* the claim is not a correction.
+`superdough-nondeterminism.md` **was corrected in place before it was filed.** Two of its
+generalisations did not survive a larger sample, and both were fixed in the document itself rather
+than annotated beside it — because a draft that gets sent is not a historical record, and a
+correction the reader meets *after* the claim is not a correction. The filed issue carries the
+corrected text.
 
 | was | is now | why |
 |---|---|---|
@@ -42,4 +55,5 @@ them was reproduced exactly while building this repository (`exports=881`, 0 exp
 
 An earlier, uncorrected copy of all three drafts exists in the Alodai monorepo at
 `docs/papers/ICLC-2027/strudel-cross-layer/upstream/`. **This directory is the authoritative
-copy.** The monorepo copy carries the two falsified claims above and must not be sent.
+copy.** The monorepo copy carries the two falsified claims above; it is not what was filed,
+and it must not be quoted as though it were.

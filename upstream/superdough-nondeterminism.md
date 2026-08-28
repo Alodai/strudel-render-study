@@ -1,4 +1,6 @@
-# Draft upstream report 3 of 3 — NOT SENT
+# Upstream report 3 of 3 — FILED 2026-08-28
+
+**Filed as:** <https://codeberg.org/uzu/strudel/issues/2117>
 
 **Target — CONFIRMED:** <https://codeberg.org/uzu/strudel/issues> (declared in `superdough`'s own
 `bugs.url`; issues open, 424 outstanding, not archived, updated 2026-08-26). `packages/superdough`
