@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+title: >-
+  strudel-render-study: a two-layer reproducibility study of Strudel's
+  pattern and signal layers
+message: >-
+  If you use this artefact, please cite it using the metadata below.
+type: dataset
+authors:
+  - given-names: Sergio
+    family-names: Pulido
+    # ORCID and affiliation intentionally omitted rather than guessed —
+    # add them before minting a DOI if they should appear.
+repository-code: 'https://github.com/Alodai/strudel-render-study'
+license: Apache-2.0
+version: 1.0.0
+abstract: >-
+  A companion artefact to an ICLC 2027 submission. Layer 1 queries three
+  deterministic Strudel patterns to haps, serialises the exact BigInt rationals,
+  and digests them; it is exactly reproducible and identical across darwin-arm64
+  and linux-x64. Layer 2 renders one of the same patterns to audio through
+  Strudel's own renderPatternAudio under 8-way concurrency; on the host of record
+  it is not reproducible, with 26 of 768 renders across four runs producing
+  different audio and 15 distinct outputs observed for one fully deterministic
+  pattern. The repository ships the patterns as data, the harness as runnable
+  commands, the concurrency protocol in numbers, per-batch results at one row per
+  render, one canonical and one divergent WAV so the energy comparison is
+  checkable, both arms of the node-pool experiment as patches against the
+  installed packages, and a control suite in which every mutation arm is shown
+  turning red. The cause of the layer-2 divergence is not identified; three
+  candidate mechanisms are recorded with their status.
+keywords:
+  - live coding
+  - Strudel
+  - reproducibility
+  - artefact evaluation
+  - Web Audio
+  - determinism
+# doi: added after the archive is minted — deliberately absent rather than invented.

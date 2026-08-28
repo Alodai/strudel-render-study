@@ -20,7 +20,9 @@
     "pool:status": "bash patches/apply-superdough-nopool.sh status",
     "verify:layer1": "node tools/verify-layer1.mjs",
     "controls:fast": "node tools/controls.mjs --fast",
-    "summarise": "node tools/summarise-run.mjs"
+    "summarise": "node tools/summarise-run.mjs",
+    "census": "node tools/digest-census.mjs",
+    "compare:wav": "node tools/compare-wav.mjs audio/canonical-4f815a0c.wav audio/divergent-e61af896.wav"
   },
   "pnpm": {
     "overrides": {
