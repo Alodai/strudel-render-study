@@ -12,12 +12,13 @@ authors:
     affiliation: Alodai
 repository-code: 'https://github.com/Alodai/strudel-render-study'
 license: Apache-2.0
-version: 1.0.2
+version: 1.0.3
 abstract: >-
   A companion artefact to an ICLC 2027 submission. Layer 1 queries three
   deterministic Strudel patterns to haps, serialises the exact BigInt rationals,
-  and digests them; it is exactly reproducible and identical across darwin-arm64
-  and linux-x64. Layer 2 renders one of the same patterns to audio through
+  and digests them; it is exactly reproducible, identical on darwin-arm64 and on
+  linux-x64 both emulated and native, and identical on both @strudel/core 1.2.5
+  and 1.2.6. Layer 2 renders one of the same patterns to audio through
   Strudel's own renderPatternAudio under 8-way concurrency; on the host of record
   it is not reproducible, with 26 of 768 renders across four runs producing
   different audio and 15 distinct outputs observed for one fully deterministic

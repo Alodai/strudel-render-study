@@ -57,16 +57,28 @@ wants to model the dependence structure has the data to do it. That analysis is 
 |---|---|
 | host of record | `darwin-arm64` (Apple silicon), macOS, Node 22.17.1 |
 | the four layer-2 runs | 192 renders each, 8-way concurrency, load average 13.7–35.3 at start |
-| layer 1 also confirmed on | `linux-x64`, Node 22.23.2, glibc 2.36 — identical digests, by `pnpm cross-host` in this repository |
+| layer 1 also confirmed on | `linux-x64`, Node 22.23.2, glibc 2.36 (emulated CPU) — identical digests, by `pnpm cross-host` in this repository |
+| and on | `linux-x64`, Node 22.22.2, **native** CPU — identical digests, run on that host and reported, recorded as a transcript |
+| layer 1 also confirmed against | `@strudel/core` **1.2.6**, the version layer 2 renders through — identical digests, by `pnpm layer1:126` in this repository |
 | layer 2 on a second host | **not run** — see below |
 
-Layer 2 was **not** measured cross-host. The available second host was CPU-emulated, which
-confounds precisely the variable layer 2 is about; and reaching Strudel's renderer there would
-have meant replicating more scaffolding, moving further from Strudel's own code. Layer 1 is
-sound on an emulated host for the opposite reason: it executes no floating point at all, so
-emulation cannot be the variable, while OS, libc, arch target and Node build genuinely differ.
-That asymmetry — the same host does not license a layer-2 claim, and an emulated host does not
-disqualify a layer-1 one — is the methodological point, so it is stated rather than buried.
+Layer 2 is still **not** measured cross-host, and the reason has changed, so it is restated
+rather than left standing. It used to be that the only second host was CPU-emulated, which
+confounds precisely the variable layer 2 is about. A native `linux-x64` host has since run
+layer 1. Layer 2 was not run on it, and nothing here reports a layer-2 number from it.
+
+Two things follow, and neither is "we ran out of time". A layer-2 run on another machine is
+not a *check* of anything published here: layer 2 is a stochastic observation whose rates are
+reported per run with that run's load, never pooled, so a second machine yields a second
+observation rather than a confirmation or a refutation of the first. And reaching Strudel's
+renderer on that host would mean replicating more scaffolding, moving further from Strudel's
+own code, which is the thing this study is trying not to do.
+
+Layer 1 is sound on an emulated host for the opposite reason: it executes no floating point at
+all, so emulation cannot be the variable, while OS, libc, arch target and Node build genuinely
+differ. That asymmetry — the same host does not license a layer-2 claim, and an emulated host
+does not disqualify a layer-1 one — is the methodological point, so it is stated rather than
+buried.
 
 **The cause is unidentified.** Three candidate mechanisms were tested and are recorded so
 nobody restarts there:
@@ -100,9 +112,9 @@ is why every arm here checks the peak.
 
 | # | claim | procedure | control |
 |---|---|---|---|
-| 1 | Layer-1 digests are exact and stable | `pnpm layer1` — query each pattern over `[0,4)`, serialise `whole`/`part` bounds as exact BigInt rationals, sort to a total order, sha256 | 4 mutation arms (`L1-M1..M4`) each move the digest; a positive arm (`L1-P`) re-queries unmutated and reproduces it. `M4` reverses row order alone, proving the sort is load-bearing |
-| 2 | The layer-1 digest can see a change in `fraction.js` | `pnpm controls` applies `patches/fraction.js@5.3.4.patch`, a value-preserving `n/d → 2n/2d`, and re-runs the check | `L1-FRAC` — the check must turn **RED** (exit 1) under the patch and green again after revert; `L1-FRAC-INSTALLED` proves the patch reached the installed tree before the red is believed |
-| 3 | Layer-1 digests are identical across hosts | `pnpm cross-host` — the same command inside `node:22-bookworm-slim` on `linux/amd64`: different OS, libc 2.36, architecture target and Node build (22.23.2) | The check is **observed failing**: corrupting one reference digest to `deadbeef…` gives `1 mismatched`, exit 1, and clean again after restore. It refuses to report success when the container produced no lines to compare. Emulation cannot be the variable because layer 1 executes no floating point at all |
+| 1 | Layer-1 digests are exact and stable | `pnpm layer1` — query each pattern over `[0,4)`, serialise `whole`/`part` bounds as exact BigInt rationals **reduced by gcd here**, sort to a total order, sha256 | 4 mutation arms (`L1-M1..M4`) each move the digest; a positive arm (`L1-P`) re-queries unmutated and reproduces it. `M4` reverses row order alone, proving the sort is load-bearing |
+| 2 | The layer-1 digest tracks the pattern's rational *times*, not how `fraction.js` spells them | `pnpm controls` applies `patches/fraction.js@5.3.4.patch`, a value-preserving `n/d → 2n/2d`, and re-runs the check; then mutates one note of p1 in `patterns/patterns.json` | `L1-FRAC` — the check must stay **GREEN** under the representation change, with `L1-FRAC-INSTALLED` proving the patch reached the installed tree, because an unchanged digest is also what a patch that never installed produces. `L1-SEM` is the arm that must turn it **RED**: `a3 → a4` moves p1 to `966ab061…` and leaves p2 and p3 alone. Neither arm is evidence without the other. **This inverted in v1.0.3** — see `results/layer1-normalisation.md` |
+| 3 | Layer-1 digests are identical across hosts | `pnpm cross-host` — the same command inside `node:22-bookworm-slim` on `linux/amd64`: different OS, libc 2.36, architecture target and Node build (22.23.2). A **native** `linux-x64` run (Node 22.22.2) is recorded as a transcript and compared by `pnpm verify:transcript` | The check is **observed failing**: corrupting one reference digest to `deadbeef…` gives `1 mismatched`, exit 1, and clean again after restore. It refuses to report success when the container produced no lines to compare. `verify:transcript --selftest` shows the transcript comparison returning green, red and both void verdicts, and the self-test itself is red-proved by two mutations of the checker. Emulation cannot be the variable because layer 1 executes no floating point at all |
 | 4 | Strudel's renderer returns nothing and delivers via a DOM click | `layer2/controls/f1-sink.mjs` intercepts `URL.createObjectURL` and records the resolved value | `L2-F1-POS` — the bytes must be valid RIFF/WAVE with exactly `(end−begin)/cps × sampleRate` frames and a non-silent peak. The arm was **observed failing first**: the first attempt reported `peak 0.000000` because sounds were unregistered, and the finding would have been reported over a render that never happened |
 | 5 | Layer-2 renders diverge under concurrency | `pnpm layer2` — 8 batches × 8 concurrent processes × 3 renders, digest each WAV, one row per render | The protocol **aborts** if it records fewer rows than it launched, so a short run cannot be read as a clean one; the summariser names the modal digest rather than hardcoding one; every peak is published beside every digest |
 | 6 | The divergence is not floating-point noise | `tools/compare-wav.mjs` on the two WAVs in `audio/` | Byte-identical header and opening, first difference at frame 39552 of 88200, 55.15 % of samples differing, max delta 52.8 % of full scale — recomputable from the shipped files |
@@ -110,6 +122,7 @@ is why every arm here checks the peak.
 | 8 | `@strudel/core@1.2.6` cannot import in Node as published | `pnpm controls` toggles the `@kabelsalat/web` patch and probes the import three times | `L2-F2-A/B/C` — as-published FAILS, `+exports` only PASSES, reverted FAILS again; `L2-F2-POS` proves `dist/index.js` really has 0 export statements and `dist/index.mjs` has one naming `SalatRepl`, so "no exports map" is the explanation and not a guess |
 | 9 | Disabling superdough's node-pool reuse does not remove the divergence | `pnpm pool:apply`, then the same 192-render protocol | `L2-POOL-B` requires the marker present in the **installed** file and a still-non-silent render; `L2-POOL-A` requires marker count 0 after revert. Both read the installed file, never the manifest |
 | 10 | Every mutation and restore in this repo is reversible | `pnpm controls` snapshots `package.json` and restores it in a `finally` | `RESTORE` — the manifest must be byte-identical to the snapshot, the reinstall must succeed, and **both** mutation markers must count 0 in the installed trees |
+| 11 | The layer-1 digests do not depend on layer 1's 1.2.5 pin | `pnpm layer1:126` — install `@strudel/core`/`@strudel/mini` 1.2.6, the versions layer 2 renders through, run the identical layer-1 code, compare with the same reference | `A126-REF` corrupts a **copy** of the reference and the check must go red — the comparison can fail; `A126-SEM` changes one note of p1 and all of p1 must move — the digests are computed on this tree, not inherited from the 1.2.5 run; `A126-FRAC` re-runs the representation arm here and it must stay green. `A126-INSTALLED` reads 1.2.6 off the **installed** tree in a fresh process and **aborts** the run if it is not there. The runner is red-proved by installing 1.2.5 while claiming 1.2.6. The environment × release grid, with its one unmeasured cell marked, is in `results/layer1-strudel-126.md` |
 
 ---
 
@@ -121,9 +134,11 @@ Requires Node ≥ 22 (`node-web-audio-api` needs it) and pnpm.
 pnpm install
 pnpm layer1        # exact — must match results/layer1-digests.txt
 pnpm verify:layer1 # the above as a check, exit 0/1
+pnpm layer1:126    # optional arm — the same, on @strudel/core 1.2.6; restores the 1.2.5 pin
 pnpm controls      # every arm, PASS/FAIL, exits non-zero if any fails
 pnpm layer2        # the concurrency protocol, N=192 — stochastic, read Scope first
 pnpm cross-host    # layer 1 on linux-x64 in Docker, compared with the reference
+pnpm verify:transcript results/measured/layer1-native-linux-x64.txt   # a run recorded off-host
 pnpm versions      # regenerate results/versions.md from the installed tree
 ```
 
@@ -138,11 +153,11 @@ patterns/patterns.json     the three patterns, as data — every harness reads t
 layer1/                    the pattern-layer digest, its controls, its dependency set
 layer2/                    the render harness, the DOM-sink recovery, the isolation arms
 protocol/                  the concurrency protocol, one shape for every subject
-patches/                   diffs against installed packages — nothing is vendored
+patches/                   diffs against installed packages — nothing is vendored, none applied by default
 results/measured/          the runs the paper cites, one row per render, with batch derived
 results/this-repo/         two further runs, produced by this repository as it stands
 audio/                     one canonical and one divergent render, for checking the comparison
-upstream/                  three unsent draft reports to the Strudel and kabelsalat trackers
+upstream/                  the three reports filed to the Strudel and kabelsalat trackers
 tools/                     the checkers, the summariser, the WAV comparison
 ```
 
@@ -155,10 +170,20 @@ p3  c3(3,8) e3(5,8,2)         f92aa8de573977d783beae803e9ce239051185aaaed1a2b515
 ```
 
 Identical on `darwin-arm64`/Node 22.17.1 and on `linux-x64`/Node 22.23.2/glibc 2.36 — the
-second measured by `pnpm cross-host` in this repository, not quoted from elsewhere; see
-`results/layer1-cross-host.md`. Hap times
-are exact `Fraction`s over `BigInt` and are serialised as `n/d`, never through `valueOf()`;
-verified reduced (`[a3 a3]*3` yields `1/3`, `1/2`, not `2/6`, `3/6`).
+second measured by `pnpm cross-host` in this repository, not quoted from elsewhere; and on a
+**native** `linux-x64` host running Node 22.22.2, which unlike the other two is **reported**
+rather than re-derived here and is labelled as such where it is recorded. All three in
+`results/layer1-cross-host.md`. Identical again on `@strudel/core` **1.2.6** — the version
+layer 2 renders through — by `pnpm layer1:126`; see `results/layer1-strudel-126.md`. Hap times
+are exact `Fraction`s over `BigInt` and are serialised as `n/d`, never through `valueOf()`,
+**reduced by gcd in this repository** rather than trusted to arrive reduced. That last part is
+new in v1.0.3 and it was an instrument defect: until then the digest was an identity test on
+the serialised representation rather than an equality test on the times, and the repository's
+own `fraction.js` patch had been demonstrating it for two releases while being read as
+evidence of sensitivity. The three digests do not change — `fraction.js@5.3.4` was already
+reducing — so `results/layer1-digests.txt` is untouched. `results/layer1-normalisation.md` has
+the before/after, the arm that inverted, the arm that replaced it, and the one form of control
+that turned out not to be available at all.
 
 ## Layer 2 — the result
 
@@ -219,11 +244,22 @@ artefact's own reproducible surface. Nothing in this repository can regenerate i
 
 ## Upstream
 
-`upstream/` holds three draft reports — to the kabelsalat tracker for the missing `exports`
+`upstream/` holds the three reports — to the kabelsalat tracker for the missing `exports`
 map, and to the Strudel tracker for `renderPatternAudio`'s interface and for the render
-divergence. **They have not been sent.** They are included because a study that found these
-things and told nobody would be a worse artefact, and because the drafts contain the minimal
-reproductions in the form a maintainer would want them.
+divergence. **All three were filed on 2026-08-28.**
+
+| report | filed as |
+|---|---|
+| `upstream/kabelsalat-exports.md` | <https://codeberg.org/froos/kabelsalat/issues/112> |
+| `upstream/strudel-renderPatternAudio.md` | <https://codeberg.org/uzu/strudel/issues/2116> |
+| `upstream/superdough-nondeterminism.md` | <https://codeberg.org/uzu/strudel/issues/2117> |
+
+They are kept here because a study that found these things and told nobody would be a worse
+artefact, and because they carry the minimal reproductions in the form a maintainer would want
+them. The filed text is these documents **without** their `Target — CONFIRMED:` preamble,
+which records how each tracker was located and is addressed to this repository's reader rather
+than to a maintainer; every claim, number and repro was filed as it stands here. See
+`upstream/README.md`.
 
 ## Versions
 
@@ -235,6 +271,12 @@ admitted 7 versions), `@kabelsalat/web` 0.4.1 patched.
 
 Layer 1 pins 1.2.5 because 1.2.6 cannot be imported in Node as published (claim 8); layer 2
 uses 1.2.6 with the one-field patch, because that is the version whose renderer was measured.
+
+That split is a packaging accommodation, and `pnpm layer1:126` shows it is not a semantic one:
+layer 1 run against 1.2.6 — with the same `@kabelsalat/web` patch layer 2 uses — produces the
+same three digests, byte for byte. It is an **optional arm** and does not move the default pin;
+`layer1/package.json` and the installed tree are restored, and that restore is asserted rather
+than assumed. `results/layer1-strudel-126.md`.
 
 ## Licence and citation
 

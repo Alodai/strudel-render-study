@@ -7,7 +7,11 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const REF = join(ROOT, 'results', 'layer1-digests.txt');
+// The reference is results/layer1-digests.txt and that is what `pnpm verify:layer1` compares
+// against. LAYER1_REF points the SAME comparison at another file, which is how an arm shows
+// this check turning red without editing the committed reference: the corruption goes in a
+// throwaway copy. Unset, the behaviour is exactly as before.
+const REF = process.env.LAYER1_REF || join(ROOT, 'results', 'layer1-digests.txt');
 
 const parse = (text) =>
   Object.fromEntries(

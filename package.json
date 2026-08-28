@@ -1,6 +1,6 @@
 {
   "name": "strudel-render-study",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -10,6 +10,7 @@
   },
   "scripts": {
     "layer1": "node layer1/run.mjs",
+    "layer1:126": "node tools/layer1-126.mjs",
     "layer2": "bash protocol/concurrency-protocol.sh strudel",
     "controls": "node tools/controls.mjs",
     "versions": "node tools/versions.mjs",
@@ -19,6 +20,7 @@
     "pool:revert": "bash patches/apply-superdough-nopool.sh revert",
     "pool:status": "bash patches/apply-superdough-nopool.sh status",
     "verify:layer1": "node tools/verify-layer1.mjs",
+    "verify:transcript": "node tools/verify-transcript.mjs",
     "controls:fast": "node tools/controls.mjs --fast",
     "summarise": "node tools/summarise-run.mjs",
     "census": "node tools/digest-census.mjs",

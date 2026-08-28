@@ -1,4 +1,6 @@
-# Draft upstream report — NOT SENT
+# Upstream report 1 of 3 — FILED 2026-08-28
+
+**Filed as:** <https://codeberg.org/froos/kabelsalat/issues/112>
 
 **Target — CONFIRMED:** <https://codeberg.org/froos/kabelsalat> (issues open, 58 outstanding,
 not archived, updated 2026-03-23). npm holds **no** `repository`, `homepage` or `bugs` field for any

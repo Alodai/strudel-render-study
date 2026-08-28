@@ -1,0 +1,8 @@
+# Layer 1 on a NATIVE linux-x64 host. Reported by the author from that host, on 2026-08-28;
+# not produced by this repository, which runs on darwin-arm64 and cannot execute a native
+# linux-x64 run. It is the verbatim stdout of `node layer1/run.mjs` there, digest lines and
+# all, and `pnpm verify:transcript` compares it against results/layer1-digests.txt.
+# host linux-x64 node v22.22.2
+p1	haps=20	sha256=90a5e26c296287cab14ebe64b2b41d4d503b040d8309c1bb6570ce86c4a0a7d6
+p2	haps=28	sha256=4d4b0d1e8775f3617520c9c2f04f7360fac2a3b5d29df2c36e531be6835593da
+p3	haps=32	sha256=f92aa8de573977d783beae803e9ce239051185aaaed1a2b515df746ea1ff09d0
