@@ -14,7 +14,27 @@ export const SPAN = [SPEC.span.begin, SPEC.span.end];
 
 // Fraction -> string. `n` and `d` are BigInt; `s` is the sign. No floating point is
 // produced or consumed anywhere on this path — that is what makes layer 1 host-independent.
-export const rat = (f) => `${f.s < 0 ? '-' : ''}${f.n}/${f.d}`;
+//
+// The gcd reduction is not decoration, and leaving it out was an instrument defect. Reading
+// `f.n`/`f.d` straight off the object INHERITS canonical form from fraction.js instead of
+// IMPOSING it here, which makes the digest an identity test on the serialised representation
+// rather than an equality test on the pattern's rational times. The two are indistinguishable
+// for as long as the upstream library happens to reduce — and patches/fraction.js@5.3.4.patch
+// is the proof they are not the same thing: a value-preserving n/d -> 2n/2d moved all three
+// digests. It no longer does. Canonical form is decided here, by this repository, so a digest
+// answers "are these the same times?" and not "did fraction.js store them the same way?".
+//
+// gcd(0, d) = d, so a zero numerator serialises as `0/1`. A zero DENOMINATOR is not something
+// to normalise quietly: fraction.js refuses to construct one, so meeting one here means the
+// value did not come from where this function assumes, and that must be loud.
+const gcd = (a, b) => { while (b) { const t = a % b; a = b; b = t; } return a; };
+export const rat = (f) => {
+  const n = f.n < 0n ? -f.n : f.n;
+  const d = f.d < 0n ? -f.d : f.d;
+  if (d === 0n) throw new Error(`rat(): zero denominator in ${f.n}/${f.d} — this is not a Fraction`);
+  const g = gcd(n, d) || 1n;
+  return `${f.s < 0 ? '-' : ''}${n / g}/${d / g}`;
+};
 
 // Object key order is not guaranteed across engines; sort it so the digest is not
 // hostage to insertion order.

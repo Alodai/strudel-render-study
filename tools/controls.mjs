@@ -5,6 +5,16 @@
 // sabotage something are expected to break `pnpm verify:layer1`, and this runner prints the
 // red they produce.
 //
+// ONE ARM IS THE OTHER WAY ROUND, DELIBERATELY, AND IT IS THE MOST IMPORTANT ONE HERE.
+// `L1-FRAC` applies a value-preserving n/d -> 2n/2d inside fraction.js. Until v1.0.3 that
+// moved all three digests and the arm required a RED — which was the arm faithfully reporting
+// an instrument defect nobody had read it as: the digest was an identity test on the
+// SERIALISED REPRESENTATION, not an equality test on the pattern's rational times. `rat()` now
+// reduces by gcd, so the same sabotage changes nothing and the arm requires GREEN. What
+// still has to turn the check red is a change in the pattern's VALUES, and `L1-SEM` is that
+// arm. A pass on `L1-FRAC` is only meaningful beside a red on `L1-SEM`; neither is evidence
+// on its own, and `L1-FRAC-INSTALLED` is what stops a green from a sabotage that never landed.
+//
 // Some arms toggle pnpm.patchedDependencies and reinstall. package.json is snapshotted at
 // the start and restored in a finally block, and the restore is verified two ways: the file
 // must be byte-identical to the snapshot, and the installed trees must carry zero mutation
@@ -105,25 +115,76 @@ try {
     expect: 'exit 0 — live digests equal the recorded reference', obs: `exit ${clean.code}`, pass: clean.code === 0,
   });
 
+  // ── L1-SEM — the arm that must turn the check RED ────────────────────────────────────
+  // Since v1.0.3 the digest ignores how fraction.js REPRESENTS a rational (L1-FRAC). What it
+  // must never ignore is a change in the pattern's VALUES, and this is where that is proved.
+  // The mutation goes into patterns/patterns.json — the file every harness reads — so the arm
+  // exercises the shipped path end to end rather than an in-process rebuild of it: one note of
+  // p1, a3 -> a4, nothing else.
+  console.log('\nL1-SEM — mutating p1 in patterns/patterns.json: "[b3 a3]" -> "[b3 a4]" …');
+  const PATTERNS = join(ROOT, 'patterns', 'patterns.json');
+  const patternsSnapshot = readFileSync(PATTERNS);
+  const P1_BEFORE = 'c3 e3 g3 [b3 a3]', P1_AFTER = 'c3 e3 g3 [b3 a4]';
+  const P1_MUTATED_DIGEST = '966ab061e82d5b22167e7dee328eca255ecf451975b8ad3e633f481e38eb7fcf';
+  try {
+    const before = patternsSnapshot.toString('utf8');
+    // SIGHTING, before the red is believed: the string really is there, exactly once, and the
+    // write really changed the file. A red from a mutation that did not land is a red about
+    // something else entirely.
+    const occurrences = before.split(P1_BEFORE).length - 1;
+    writeFileSync(PATTERNS, before.replace(P1_BEFORE, P1_AFTER));
+    const landed = occurrences === 1 && readFileSync(PATTERNS, 'utf8').includes(P1_AFTER);
+    record({
+      id: 'L1-SEM-APPLIED', group: 'layer1', desc: 'the pattern mutation is actually in the file the harness reads',
+      expect: `"${P1_BEFORE}" present exactly once, replaced by "${P1_AFTER}"`,
+      obs: `occurrences ${occurrences}, mutated string present: ${readFileSync(PATTERNS, 'utf8').includes(P1_AFTER)}`, pass: landed,
+    });
+    const sem = node('tools/verify-layer1.mjs');
+    process.stdout.write(sem.out);
+    // Not just "it went red" — WHICH pattern moved, and to what. A red that named p2 or p3
+    // would be a different event wearing the same exit code.
+    const p1Moved = new RegExp(`p1  MISMATCH  live=${P1_MUTATED_DIGEST.slice(0, 16)}`).test(sem.out);
+    const othersHeld = /p2  MATCH/.test(sem.out) && /p3  MATCH/.test(sem.out);
+    record({
+      id: 'L1-SEM', group: 'layer1', desc: 'MUTATION — one note of p1 changed, a3 -> a4',
+      expect: `verify:layer1 turns RED (exit 1), p1 moves to ${P1_MUTATED_DIGEST.slice(0, 8)}…, p2 and p3 unchanged`,
+      obs: `exit ${sem.code}, p1 -> ${P1_MUTATED_DIGEST.slice(0, 8)}…: ${p1Moved}, p2/p3 held: ${othersHeld}`,
+      pass: sem.code === 1 && p1Moved && othersHeld,
+    });
+  } finally {
+    writeFileSync(PATTERNS, patternsSnapshot);
+  }
+  const semBack = node('tools/verify-layer1.mjs');
+  record({
+    id: 'L1-SEM-RESTORE', group: 'layer1', desc: 'the pattern file and the digests are back',
+    expect: 'patterns.json byte-identical to the snapshot and verify:layer1 exit 0',
+    obs: `identical=${readFileSync(PATTERNS).equals(patternsSnapshot)}, exit ${semBack.code}`,
+    pass: readFileSync(PATTERNS).equals(patternsSnapshot) && semBack.code === 0,
+  });
+
   if (FAST) {
     console.log('\n--fast: skipping every install-based arm (L1-FRAC, L2-F2-A/B/C, L2-POOL-*).');
   } else {
-    // fraction.js represents EVERY layer-1 time value. If the digest cannot see a change in
-    // it, "all versions in the declared range agree" would be indistinguishable from a
-    // harness that never reads fraction.js at all.
+    // fraction.js represents EVERY layer-1 time value, so how it STORES that value must not
+    // reach the digest. This arm changes the storage and nothing else — same rationals, twice
+    // the numerator and denominator — and the digest must not notice.
     console.log('\napplying patches/fraction.js@5.3.4.patch — value-preserving n/d -> 2n/2d …');
     setPatch('fraction.js@5.3.4', 'patches/fraction.js@5.3.4.patch');
     const sabMarkers = markerCount(['@strudel/core', 'fraction.js'], 'dist/fraction.mjs', 'STRUDEL_STUDY_FRACSAB', 'layer1/package.json');
+    // The marker assertion is what makes the green worth anything. An unchanged digest is
+    // exactly what a patch that never installed would also produce, and the two are
+    // indistinguishable from the check's output alone.
     record({
-      id: 'L1-FRAC-INSTALLED', group: 'layer1', desc: 'sabotage is actually present in the installed tree',
+      id: 'L1-FRAC-INSTALLED', group: 'layer1', desc: 'the representation change is actually present in the installed tree',
       expect: 'marker count > 0', obs: `STRUDEL_STUDY_FRACSAB × ${sabMarkers}`, pass: sabMarkers > 0,
     });
     const sabotaged = node('tools/verify-layer1.mjs');
     process.stdout.write(sabotaged.out);
     record({
-      id: 'L1-FRAC', group: 'layer1', desc: 'MUTATION — fraction.js prints 2n/2d instead of n/d',
-      expect: 'verify:layer1 turns RED (exit 1)', obs: `exit ${sabotaged.code}${sabotaged.code === 1 ? ' — check failed, as required' : ''}`,
-      pass: sabotaged.code === 1,
+      id: 'L1-FRAC', group: 'layer1', desc: 'MUTATION — fraction.js stores 2n/2d instead of n/d',
+      expect: 'verify:layer1 stays GREEN (exit 0) — the digest is insensitive to representation',
+      obs: `exit ${sabotaged.code}${sabotaged.code === 0 ? ' — unchanged, as required' : ' — the digest MOVED on a value-preserving change'}`,
+      pass: sabotaged.code === 0,
     });
 
     console.log('\nreverting fraction.js …');
@@ -131,7 +192,7 @@ try {
     const backMarkers = markerCount(['@strudel/core', 'fraction.js'], 'dist/fraction.mjs', 'STRUDEL_STUDY_FRACSAB', 'layer1/package.json');
     const restored = node('tools/verify-layer1.mjs');
     record({
-      id: 'L1-FRAC-RESTORE', group: 'layer1', desc: 'revert restores the tree and the digests',
+      id: 'L1-FRAC-RESTORE', group: 'layer1', desc: 'revert restores the tree',
       expect: 'marker count 0 and verify:layer1 exit 0', obs: `markers ${backMarkers}, exit ${restored.code}`,
       pass: backMarkers === 0 && restored.code === 0,
     });
