@@ -1,7 +1,8 @@
 # The layer-1 digest normalises rationals, and used not to
 
-An instrument defect in v1.0.2, its fix in v1.0.3, and what happens to the control arm that
-had been reporting it correctly for two releases while being read the wrong way up.
+An instrument defect in v1.0.2, its fix in v1.0.3, what happens to the control arm that had
+been reporting it correctly for two releases while being read the wrong way up — and the
+temporal arm added in v1.0.4, without which the very path the fix touched had no red over it.
 
 ## The defect
 
@@ -55,12 +56,13 @@ where this function assumes.
 
 ## What changed, measured
 
-| | v1.0.2 | v1.0.3 |
-|---|---|---|
-| `pnpm layer1`, unmutated | `90a5e26c…` `4d4b0d1e…` `f92aa8de…` | **identical, byte for byte** |
-| `pnpm cross-host` (emulated `linux-x64`) | 0 mismatched | 0 mismatched, re-run under the change |
-| representation change (`n/d → 2n/2d`) | **3 mismatched, exit 1** | **0 mismatched, exit 0** |
-| value change (p1 `a3 → a4`) | 1 mismatched, exit 1 | 1 mismatched, exit 1 |
+| | v1.0.2 | v1.0.3 | v1.0.4 |
+|---|---|---|---|
+| `pnpm layer1`, unmutated | `90a5e26c…` `4d4b0d1e…` `f92aa8de…` | **identical, byte for byte** | identical |
+| `pnpm cross-host` (emulated `linux-x64`) | 0 mismatched | 0 mismatched, re-run under the change | 0 mismatched |
+| representation change (`n/d → 2n/2d`) | **3 mismatched, exit 1** | **0 mismatched, exit 0** | 0 mismatched, exit 0 |
+| **temporal change (p1 re-partitioned)** | not run | **not run** | **1 mismatched, exit 1** — `ff808b12…` |
+| value change (p1 `a3 → a4`) | 1 mismatched, exit 1 | 1 mismatched, exit 1 | 1 mismatched, exit 1 |
 
 The first row is the one that decides whether this ships: `fraction.js` was already reducing,
 so the fix is a **no-op in normal operation**, and `results/layer1-digests.txt` is not edited.
@@ -68,7 +70,7 @@ Had it moved a digest, the instruction was to stop and report rather than update
 references — the three values are the reference, and a fix that quietly restates them is not a
 fix.
 
-## The control arm inverts, and needs a replacement
+## The control arm inverts, and the replacement is a triple
 
 `L1-FRAC` now requires **GREEN**: *the digest is insensitive to how a rational is stored*. Its
 sighting matters more than it did before, not less — an unchanged digest is precisely what a
@@ -76,8 +78,25 @@ patch that never installed would also produce, and the check's own output cannot
 apart. So `L1-FRAC-INSTALLED` asserts the marker is in the **installed** `fraction.mjs`, beside
 its `newFraction` anchor, before the green counts for anything.
 
-But a green arm cannot be the only arm, or the digest could be insensitive to everything.
-`L1-SEM` replaces it as the arm that must turn the check red:
+But a green arm cannot be the only arm, or the digest could be insensitive to everything. Two
+arms turn the check **red**, and they are red about different things:
+
+| arm | the mutation | required |
+|---|---|---|
+| `L1-FRAC` | **representation** — `fraction.js` stores `2n/2d` for the same rationals | **GREEN**, exit 0 |
+| `L1-TIME` | **time** — p1 re-partitioned: `c3 e3 g3 [b3 a3]` → `c3 e3 [g3 b3] a3` | **RED**, exit 1 |
+| `L1-SEM` | **value** — one note of p1: `[b3 a3]` → `[b3 a4]` | **RED**, exit 1 |
+
+**That triple is the claim, and no one arm carries it.** Read singly each says much less than
+it appears to. `L1-FRAC` green alone is also what a digest insensitive to *everything* would
+produce. `L1-SEM` red alone proves the digest sees a changed **note** — it says nothing about a
+changed **time**, and time is precisely the path `rat()`'s gcd normalisation touches. From
+v1.0.3 to v1.0.4 that path therefore had a green arm over it and no red one, which by this
+artefact's own standing rule means it had **not been observed failing**. `L1-TIME` is the arm
+that closes that gap. Together the three read: *the digest tracks the pattern's rational times
+and its values, and not the spelling either is stored in.*
+
+### `L1-SEM` — the value arm
 
 ```
 L1-SEM — mutating p1 in patterns/patterns.json: "[b3 a3]" -> "[b3 a4]" …
@@ -94,8 +113,31 @@ the write readable back — because a red from a mutation that did not land is a
 something else. And it asserts **which** pattern moved and to what (`966ab061…`, with p2 and p3
 holding), because a red naming p2 would be a different event wearing the same exit code.
 
-The pair is the claim. `L1-FRAC` green alone says nothing; `L1-SEM` red alone says nothing
-about representation. Together: **the digest tracks the times and not their spelling.**
+### `L1-TIME` — the temporal arm, added in v1.0.4
+
+The mutation re-partitions p1 without changing what is played:
+
+```
+L1-TIME — mutating p1 in patterns/patterns.json: "c3 e3 g3 [b3 a3]" -> "c3 e3 [g3 b3] a3" …
+p1  MISMATCH  live=ff808b1237143162…  reference=90a5e26c296287ca…
+p2  MATCH     live=4d4b0d1e8775f361…  reference=4d4b0d1e8775f361…
+p3  MATCH     live=f92aa8de573977d7…  reference=f92aa8de573977d7…
+checked 3 patterns, 1 mismatched                                     exit 1
+```
+
+The same five notes, in the same order, over the same four cycles. What moves is where the
+rational boundaries between them fall: `g3` and `b3` become a subdivided step and `a3` becomes
+a whole one. It carries the same sightings as `L1-SEM` — the string present exactly once, the
+write readable back, `p1` named and `p2`/`p3` held — and two more of its own:
+
+* **`L1-TIME-HAPS` asserts the hap count is unchanged at 20.** Without it, a red would be
+  consistent with the digest noticing that there are now a different *number* of events, which
+  is a structural change, not a temporal one. The arm has to be the times and only the times.
+* **`L1-TIME-BLOB` requires the working file to equal `HEAD:patterns/patterns.json` before
+  anything is written.** Restore is from the **committed blob**, and verified by content — the
+  file byte-identical to the blob and `verify:layer1` back to exit 0. Restoring a *dirty* file
+  from `HEAD` would silently discard an edit, so if the working file and the blob differ the
+  arm refuses to mutate at all and reports `L1-TIME` as failed rather than taking that risk.
 
 ## What is *not* available as an arm, and why that is stated rather than hidden
 
@@ -121,6 +163,8 @@ has not tested and does not assert.
 failure mode, not a bug in the patch.
 
 The honest scope statement, therefore: sensitivity to a change in the *pattern's* values is
-proved (`L1-SEM`); sensitivity to a change in a value produced *inside* `fraction.js` is not
-provable by any arm that could be built here, because that library is load-bearing for
-termination and not only for arithmetic.
+proved (`L1-SEM`), and so is sensitivity to a change in the *pattern's* times (`L1-TIME`);
+insensitivity to how those times are *stored* is proved the other way up (`L1-FRAC`). What is
+not provable by any arm that could be built here is sensitivity to a change in a value produced
+*inside* `fraction.js`, because that library is load-bearing for termination and not only for
+arithmetic.

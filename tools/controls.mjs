@@ -10,10 +10,22 @@
 // moved all three digests and the arm required a RED — which was the arm faithfully reporting
 // an instrument defect nobody had read it as: the digest was an identity test on the
 // SERIALISED REPRESENTATION, not an equality test on the pattern's rational times. `rat()` now
-// reduces by gcd, so the same sabotage changes nothing and the arm requires GREEN. What
-// still has to turn the check red is a change in the pattern's VALUES, and `L1-SEM` is that
-// arm. A pass on `L1-FRAC` is only meaningful beside a red on `L1-SEM`; neither is evidence
-// on its own, and `L1-FRAC-INSTALLED` is what stops a green from a sabotage that never landed.
+// reduces by gcd, so the same sabotage changes nothing and the arm requires GREEN.
+//
+// THE CLAIM IS A TRIPLE, AND NO ONE ARM CARRIES IT. Since v1.0.4 three arms sit over the
+// layer-1 digest, and each is worthless alone:
+//
+//   L1-FRAC  representation change (n/d -> 2n/2d, same rationals)   -> must stay GREEN
+//   L1-TIME  temporal change (p1 re-partitioned, same notes/haps)   -> must go RED
+//   L1-SEM   value change (one note of p1, a3 -> a4)                -> must go RED
+//
+// Together: the digest tracks the pattern's rational TIMES and its VALUES, and not the
+// spelling either is stored in. `L1-FRAC` green alone would also be produced by a digest
+// insensitive to everything. `L1-SEM` red alone proves the digest sees a changed NOTE and
+// says nothing about a changed TIME — which is the path `rat()`'s gcd normalisation touches,
+// and which had no red arm over it at all until `L1-TIME`. `L1-FRAC-INSTALLED` is what stops
+// a green from a sabotage that never landed; `L1-TIME-HAPS` is what stops a red that came
+// from changing how many events there are rather than when they fall.
 //
 // Some arms toggle pnpm.patchedDependencies and reinstall. package.json is snapshotted at
 // the start and restored in a finally block, and the restore is verified two ways: the file
@@ -161,6 +173,87 @@ try {
     obs: `identical=${readFileSync(PATTERNS).equals(patternsSnapshot)}, exit ${semBack.code}`,
     pass: readFileSync(PATTERNS).equals(patternsSnapshot) && semBack.code === 0,
   });
+
+  // ── L1-TIME — the arm that shows the digest sees a change in TIME ────────────────────
+  // `L1-SEM` changes a note. That proves the digest sees a changed VALUE; it does not prove
+  // it sees a changed TIME, and time is the path `rat()`'s gcd normalisation touches. From
+  // v1.0.3 until this arm was added, that path had a green arm over it (`L1-FRAC`) and no red
+  // one, so by this artefact's own rule it had not been observed failing.
+  //
+  // The mutation re-partitions p1 without changing what is played: "c3 e3 g3 [b3 a3]" ->
+  // "c3 e3 [g3 b3] a3". The same five notes in the same order, the same 20 haps over the
+  // same four cycles — only the rational boundaries between them move. The hap count is
+  // ASSERTED, not assumed: a red from a mutation that changed how MANY events there are
+  // would be structural, not temporal, and would prove something else.
+  //
+  // Restore is from the COMMITTED BLOB rather than an in-memory snapshot, and it is verified
+  // by content. So the working file is first required to equal that blob — restoring a dirty
+  // file from HEAD would silently discard someone's edit, and the arm refuses to mutate at all
+  // rather than take that risk.
+  console.log('\nL1-TIME — mutating p1 in patterns/patterns.json: "c3 e3 g3 [b3 a3]" -> "c3 e3 [g3 b3] a3" …');
+  const committedBlob = (() => {
+    try {
+      return execFileSync('git', ['show', 'HEAD:patterns/patterns.json'], { cwd: ROOT, maxBuffer: 1 << 24 });
+    } catch { return null; }
+  })();
+  const blobMatchesWorking = !!committedBlob && readFileSync(PATTERNS).equals(committedBlob);
+  record({
+    id: 'L1-TIME-BLOB', group: 'layer1', desc: 'the committed blob is retrievable and is what the working file holds',
+    expect: 'git show HEAD:patterns/patterns.json succeeds and is byte-identical to the working file',
+    obs: committedBlob ? `blob ${committedBlob.length} bytes, identical=${blobMatchesWorking}` : 'git show failed',
+    pass: blobMatchesWorking,
+  });
+
+  if (!blobMatchesWorking) {
+    console.log('L1-TIME — SKIPPED: refusing to mutate a file this arm could not restore from HEAD.');
+    record({
+      id: 'L1-TIME', group: 'layer1', desc: 'MUTATION — p1 re-partitioned in time, same notes, same hap count',
+      expect: 'verify:layer1 turns RED (exit 1)', obs: 'not run — L1-TIME-BLOB failed', pass: false,
+    });
+  } else {
+    const T1_BEFORE = 'c3 e3 g3 [b3 a3]', T1_AFTER = 'c3 e3 [g3 b3] a3';
+    const T1_MUTATED_DIGEST = 'ff808b12371431620952ff81c026bee9b1a145d83dbd57ebaf9f12dcb09788fb';
+    try {
+      const before = committedBlob.toString('utf8');
+      const occurrences = before.split(T1_BEFORE).length - 1;
+      writeFileSync(PATTERNS, before.replace(T1_BEFORE, T1_AFTER));
+      const landed = occurrences === 1 && readFileSync(PATTERNS, 'utf8').includes(T1_AFTER);
+      record({
+        id: 'L1-TIME-APPLIED', group: 'layer1', desc: 'the re-partition is actually in the file the harness reads',
+        expect: `"${T1_BEFORE}" present exactly once, replaced by "${T1_AFTER}"`,
+        obs: `occurrences ${occurrences}, mutated string present: ${readFileSync(PATTERNS, 'utf8').includes(T1_AFTER)}`, pass: landed,
+      });
+      // The hap count is what separates "the times moved" from "the events changed".
+      const timeRun = node('layer1/run.mjs');
+      const p1Haps = (timeRun.out.match(/^p1\thaps=(\d+)\t/m) ?? [])[1];
+      record({
+        id: 'L1-TIME-HAPS', group: 'layer1', desc: 'the re-partition changed the times and not the number of events',
+        expect: 'p1 still reports haps=20 under the mutation',
+        obs: p1Haps === undefined ? 'no p1 row in the run output' : `haps=${p1Haps}`,
+        pass: p1Haps === '20',
+      });
+      const time = node('tools/verify-layer1.mjs');
+      process.stdout.write(time.out);
+      const p1Moved = new RegExp(`p1  MISMATCH  live=${T1_MUTATED_DIGEST.slice(0, 16)}`).test(time.out);
+      const othersHeld = /p2  MATCH/.test(time.out) && /p3  MATCH/.test(time.out);
+      record({
+        id: 'L1-TIME', group: 'layer1', desc: 'MUTATION — p1 re-partitioned in time, same notes, same hap count',
+        expect: `verify:layer1 turns RED (exit 1), p1 moves to ${T1_MUTATED_DIGEST.slice(0, 8)}…, p2 and p3 unchanged`,
+        obs: `exit ${time.code}, p1 -> ${T1_MUTATED_DIGEST.slice(0, 8)}…: ${p1Moved}, p2/p3 held: ${othersHeld}`,
+        pass: time.code === 1 && p1Moved && othersHeld,
+      });
+    } finally {
+      writeFileSync(PATTERNS, committedBlob);
+    }
+    const timeBack = node('tools/verify-layer1.mjs');
+    const backIdentical = readFileSync(PATTERNS).equals(committedBlob);
+    record({
+      id: 'L1-TIME-RESTORE', group: 'layer1', desc: 'the pattern file is back to the committed blob, verified by content',
+      expect: 'patterns.json byte-identical to HEAD:patterns/patterns.json and verify:layer1 exit 0',
+      obs: `identical=${backIdentical}, exit ${timeBack.code}`,
+      pass: backIdentical && timeBack.code === 0,
+    });
+  }
 
   if (FAST) {
     console.log('\n--fast: skipping every install-based arm (L1-FRAC, L2-F2-A/B/C, L2-POOL-*).');

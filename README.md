@@ -33,14 +33,18 @@ reproduce.
 Concretely, running `pnpm layer2` yourself:
 
 * You should **not** expect the same six digests, the same count, or the same rate.
-* On a **loaded** machine you should expect to observe divergence at *some* rate. The four
-  runs here span 2.60 % to 4.69 % on one machine, and that spread is itself the point.
-* On an **idle** machine you should expect **zero**, and zero is exactly what serial runs
-  produced here (20/20, 20 pairs, 36 under forced GC pressure — all identical).
-* **If you see zero, that is not a refutation.** It is the expected outcome of the condition
-  you ran under. It means your machine was not contended enough during the run, and the only
-  honest conclusion is that this particular run observed nothing. The summariser says so in
-  those words when the count is zero, so a clean run cannot be mistaken for a negative result.
+* On a **loaded** machine you **may** observe divergence, and a run that observes none neither
+  confirms nor refutes what is reported here. The four runs here span 2.60 % to 4.69 %, and
+  that spread is itself the point — but all four were measured on **one physical machine**.
+  Whether a second machine under load diverges at all has not been measured, so no expectation
+  about your machine is claimed, only about what happened on this one.
+* Without contention, zero is what was seen here: serial runs produced 20/20, 20 pairs, and 36
+  under forced GC pressure — all identical.
+* **If you see zero, that is not a refutation.** It is also not evidence that your machine was
+  insufficiently loaded — that would be attributing a cause this study has not measured on your
+  machine. The only honest conclusion is that this particular run observed nothing. The
+  summariser says so in those words when the count is zero, so a clean run cannot be mistaken
+  for a negative result.
 * Correspondingly, seeing divergence once does not establish a rate. Rates here are reported
   per run, with the load average of that run, and never pooled into a single headline number.
 
@@ -113,7 +117,7 @@ is why every arm here checks the peak.
 | # | claim | procedure | control |
 |---|---|---|---|
 | 1 | Layer-1 digests are exact and stable | `pnpm layer1` — query each pattern over `[0,4)`, serialise `whole`/`part` bounds as exact BigInt rationals **reduced by gcd here**, sort to a total order, sha256 | 4 mutation arms (`L1-M1..M4`) each move the digest; a positive arm (`L1-P`) re-queries unmutated and reproduces it. `M4` reverses row order alone, proving the sort is load-bearing |
-| 2 | The layer-1 digest tracks the pattern's rational *times*, not how `fraction.js` spells them | `pnpm controls` applies `patches/fraction.js@5.3.4.patch`, a value-preserving `n/d → 2n/2d`, and re-runs the check; then mutates one note of p1 in `patterns/patterns.json` | `L1-FRAC` — the check must stay **GREEN** under the representation change, with `L1-FRAC-INSTALLED` proving the patch reached the installed tree, because an unchanged digest is also what a patch that never installed produces. `L1-SEM` is the arm that must turn it **RED**: `a3 → a4` moves p1 to `966ab061…` and leaves p2 and p3 alone. Neither arm is evidence without the other. **This inverted in v1.0.3** — see `results/layer1-normalisation.md` |
+| 2 | The layer-1 digest tracks the pattern's rational *times* and its *values*, not how `fraction.js` spells them | `pnpm controls` applies `patches/fraction.js@5.3.4.patch`, a value-preserving `n/d → 2n/2d`, and re-runs the check; then makes two different mutations to p1 in `patterns/patterns.json` | **A triple, and no one arm carries it.** `L1-FRAC` — the check must stay **GREEN** under the representation change, with `L1-FRAC-INSTALLED` proving the patch reached the installed tree, because an unchanged digest is also what a patch that never installed produces. `L1-TIME` must turn it **RED** on a *temporal* change: p1 re-partitioned `c3 e3 g3 [b3 a3] → c3 e3 [g3 b3] a3`, same five notes and same 20 haps (`L1-TIME-HAPS` asserts that), moves p1 to `ff808b12…`. `L1-SEM` must turn it **RED** on a *value* change: `a3 → a4` moves p1 to `966ab061…`. Both reds leave p2 and p3 alone. **This inverted in v1.0.3, and the temporal arm was added in v1.0.4** — see `results/layer1-normalisation.md` |
 | 3 | Layer-1 digests are identical across hosts | `pnpm cross-host` — the same command inside `node:22-bookworm-slim` on `linux/amd64`: different OS, libc 2.36, architecture target and Node build (22.23.2). A **native** `linux-x64` run (Node 22.22.2) is recorded as a transcript and compared by `pnpm verify:transcript` | The check is **observed failing**: corrupting one reference digest to `deadbeef…` gives `1 mismatched`, exit 1, and clean again after restore. It refuses to report success when the container produced no lines to compare. `verify:transcript --selftest` shows the transcript comparison returning green, red and both void verdicts, and the self-test itself is red-proved by two mutations of the checker. Emulation cannot be the variable because layer 1 executes no floating point at all |
 | 4 | Strudel's renderer returns nothing and delivers via a DOM click | `layer2/controls/f1-sink.mjs` intercepts `URL.createObjectURL` and records the resolved value | `L2-F1-POS` — the bytes must be valid RIFF/WAVE with exactly `(end−begin)/cps × sampleRate` frames and a non-silent peak. The arm was **observed failing first**: the first attempt reported `peak 0.000000` because sounds were unregistered, and the finding would have been reported over a render that never happened |
 | 5 | Layer-2 renders diverge under concurrency | `pnpm layer2` — 8 batches × 8 concurrent processes × 3 renders, digest each WAV, one row per render | The protocol **aborts** if it records fewer rows than it launched, so a short run cannot be read as a clean one; the summariser names the modal digest rather than hardcoding one; every peak is published beside every digest |
@@ -181,9 +185,14 @@ new in v1.0.3 and it was an instrument defect: until then the digest was an iden
 the serialised representation rather than an equality test on the times, and the repository's
 own `fraction.js` patch had been demonstrating it for two releases while being read as
 evidence of sensitivity. The three digests do not change — `fraction.js@5.3.4` was already
-reducing — so `results/layer1-digests.txt` is untouched. `results/layer1-normalisation.md` has
-the before/after, the arm that inverted, the arm that replaced it, and the one form of control
-that turned out not to be available at all.
+reducing — so `results/layer1-digests.txt` is untouched. That normalisation is on the **time**
+path, and from v1.0.3 to v1.0.4 that path had a green arm over it (`L1-FRAC`) and no red one:
+`L1-SEM` changes a *note*, which proves the digest sees a changed value and not a changed time.
+`L1-TIME`, added in v1.0.4, is the missing red — p1 re-partitioned into the same five notes and
+the same 20 haps at different rational boundaries, which must move the digest.
+`results/layer1-normalisation.md` has the before/after, the arm that inverted, the two arms
+that now turn the check red, and the one form of control that turned out not to be available at
+all.
 
 ## Layer 2 — the result
 

@@ -12,7 +12,7 @@ authors:
     affiliation: Alodai
 repository-code: 'https://github.com/Alodai/strudel-render-study'
 license: Apache-2.0
-version: 1.0.3
+version: 1.0.4
 abstract: >-
   A companion artefact to an ICLC 2027 submission. Layer 1 queries three
   deterministic Strudel patterns to haps, serialises the exact BigInt rationals,
