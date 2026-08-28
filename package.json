@@ -10,6 +10,7 @@
   },
   "scripts": {
     "layer1": "node layer1/run.mjs",
+    "layer1:126": "node tools/layer1-126.mjs",
     "layer2": "bash protocol/concurrency-protocol.sh strudel",
     "controls": "node tools/controls.mjs",
     "versions": "node tools/versions.mjs",
