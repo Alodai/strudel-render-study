@@ -22,7 +22,8 @@
     "controls:fast": "node tools/controls.mjs --fast",
     "summarise": "node tools/summarise-run.mjs",
     "census": "node tools/digest-census.mjs",
-    "compare:wav": "node tools/compare-wav.mjs audio/canonical-4f815a0c.wav audio/divergent-e61af896.wav"
+    "compare:wav": "node tools/compare-wav.mjs audio/canonical-4f815a0c.wav audio/divergent-e61af896.wav",
+    "cross-host": "bash tools/cross-host.sh"
   },
   "pnpm": {
     "overrides": {

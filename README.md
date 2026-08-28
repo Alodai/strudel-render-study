@@ -57,7 +57,7 @@ wants to model the dependence structure has the data to do it. That analysis is 
 |---|---|
 | host of record | `darwin-arm64` (Apple silicon), macOS, Node 22.17.1 |
 | the four layer-2 runs | 192 renders each, 8-way concurrency, load average 13.7–35.3 at start |
-| layer 1 also confirmed on | `linux-x64`, Node 22.23.2, glibc 2.36 — identical digests |
+| layer 1 also confirmed on | `linux-x64`, Node 22.23.2, glibc 2.36 — identical digests, by `pnpm cross-host` in this repository |
 | layer 2 on a second host | **not run** — see below |
 
 Layer 2 was **not** measured cross-host. The available second host was CPU-emulated, which
@@ -102,7 +102,7 @@ is why every arm here checks the peak.
 |---|---|---|---|
 | 1 | Layer-1 digests are exact and stable | `pnpm layer1` — query each pattern over `[0,4)`, serialise `whole`/`part` bounds as exact BigInt rationals, sort to a total order, sha256 | 4 mutation arms (`L1-M1..M4`) each move the digest; a positive arm (`L1-P`) re-queries unmutated and reproduces it. `M4` reverses row order alone, proving the sort is load-bearing |
 | 2 | The layer-1 digest can see a change in `fraction.js` | `pnpm controls` applies `patches/fraction.js@5.3.4.patch`, a value-preserving `n/d → 2n/2d`, and re-runs the check | `L1-FRAC` — the check must turn **RED** (exit 1) under the patch and green again after revert; `L1-FRAC-INSTALLED` proves the patch reached the installed tree before the red is believed |
-| 3 | Layer-1 digests are identical across hosts | Same command on `darwin-arm64`/Node 22.17.1 and `linux-x64`/Node 22.23.2/glibc 2.36 | Layer 1 executes no floating point, so emulation cannot be the variable; a one-note change on the second host moved `p1` alone and left `p2`/`p3` identical |
+| 3 | Layer-1 digests are identical across hosts | `pnpm cross-host` — the same command inside `node:22-bookworm-slim` on `linux/amd64`: different OS, libc 2.36, architecture target and Node build (22.23.2) | The check is **observed failing**: corrupting one reference digest to `deadbeef…` gives `1 mismatched`, exit 1, and clean again after restore. It refuses to report success when the container produced no lines to compare. Emulation cannot be the variable because layer 1 executes no floating point at all |
 | 4 | Strudel's renderer returns nothing and delivers via a DOM click | `layer2/controls/f1-sink.mjs` intercepts `URL.createObjectURL` and records the resolved value | `L2-F1-POS` — the bytes must be valid RIFF/WAVE with exactly `(end−begin)/cps × sampleRate` frames and a non-silent peak. The arm was **observed failing first**: the first attempt reported `peak 0.000000` because sounds were unregistered, and the finding would have been reported over a render that never happened |
 | 5 | Layer-2 renders diverge under concurrency | `pnpm layer2` — 8 batches × 8 concurrent processes × 3 renders, digest each WAV, one row per render | The protocol **aborts** if it records fewer rows than it launched, so a short run cannot be read as a clean one; the summariser names the modal digest rather than hardcoding one; every peak is published beside every digest |
 | 6 | The divergence is not floating-point noise | `tools/compare-wav.mjs` on the two WAVs in `audio/` | Byte-identical header and opening, first difference at frame 39552 of 88200, 55.15 % of samples differing, max delta 52.8 % of full scale — recomputable from the shipped files |
@@ -123,6 +123,7 @@ pnpm layer1        # exact — must match results/layer1-digests.txt
 pnpm verify:layer1 # the above as a check, exit 0/1
 pnpm controls      # every arm, PASS/FAIL, exits non-zero if any fails
 pnpm layer2        # the concurrency protocol, N=192 — stochastic, read Scope first
+pnpm cross-host    # layer 1 on linux-x64 in Docker, compared with the reference
 pnpm versions      # regenerate results/versions.md from the installed tree
 ```
 
@@ -153,7 +154,9 @@ p2  <c3 e3> g3*3 [a3 b3 c4]   4d4b0d1e8775f3617520c9c2f04f7360fac2a3b5d29df2c36e
 p3  c3(3,8) e3(5,8,2)         f92aa8de573977d783beae803e9ce239051185aaaed1a2b515df746ea1ff09d0
 ```
 
-Identical on `darwin-arm64`/Node 22.17.1 and `linux-x64`/Node 22.23.2/glibc 2.36. Hap times
+Identical on `darwin-arm64`/Node 22.17.1 and on `linux-x64`/Node 22.23.2/glibc 2.36 — the
+second measured by `pnpm cross-host` in this repository, not quoted from elsewhere; see
+`results/layer1-cross-host.md`. Hap times
 are exact `Fraction`s over `BigInt` and are serialised as `n/d`, never through `valueOf()`;
 verified reduced (`[a3 a3]*3` yields `1/3`, `1/2`, not `2/6`, `3/6`).
 
