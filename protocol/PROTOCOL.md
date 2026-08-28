@@ -96,5 +96,14 @@ observed. It takes the canonical render to be the **mode of the run** rather tha
 hardcoded in the tool, so it stays correct on a host whose canonical render is not this
 one's.
 
+What counts as a render is **asserted**, not guessed. A render row is
+`batch pid position sha256 peak` — optionally with the `no`/`YES` column that
+`tools/derive-batches.mjs` adds — and its digest is 64 hex characters. The one literal
+column-header line those derived files carry is the only other line accepted, and it is named
+in the output rather than dropped quietly; anything else aborts the summary instead of being
+counted or skipped, and a file that yields no render rows is VOID. Every input line is
+accounted for on the first line of output, because a filtered line and a miscounted one look
+the same from a total.
+
 When the count is zero it says so in words: on an idle machine zero is the expected outcome
 and is not a negative result. See the scope section of `../README.md`.
