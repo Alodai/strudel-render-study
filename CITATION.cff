@@ -8,8 +8,8 @@ type: dataset
 authors:
   - given-names: Sergio
     family-names: Pulido
-    # ORCID and affiliation intentionally omitted rather than guessed —
-    # add them before minting a DOI if they should appear.
+    orcid: 'https://orcid.org/0009-0001-0020-683X'
+    affiliation: Alodai
 repository-code: 'https://github.com/Alodai/strudel-render-study'
 license: Apache-2.0
 version: 1.0.0
